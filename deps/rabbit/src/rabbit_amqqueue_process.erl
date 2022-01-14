@@ -283,15 +283,7 @@ terminate(shutdown = R,      State = #q{backing_queue = BQ, q = Q0}) ->
     rabbit_core_metrics:queue_deleted(qname(State)),
     terminate_shutdown(
     fun (BQS) ->
-        rabbit_misc:execute_mnesia_transaction(
-             fun() ->
-                [Q] = mnesia:read({rabbit_queue, QName}),
-                Q2 = amqqueue:set_state(Q, stopped),
-                %% amqqueue migration:
-                %% The amqqueue was read from this transaction, no need
-                %% to handle migration.
-                rabbit_amqqueue:store_queue(Q2)
-             end),
+        update_state(stopped, QName),
         BQ:terminate(R, BQS)
     end, State);
 terminate({shutdown, missing_owner} = Reason, State) ->
@@ -314,10 +306,7 @@ terminate(normal,            State) -> %% delete case
 terminate(_Reason,           State = #q{q = Q}) ->
     terminate_shutdown(fun (BQS) ->
                                Q2 = amqqueue:set_state(Q, crashed),
-                               rabbit_misc:execute_mnesia_transaction(
-                                 fun() ->
-                                         rabbit_amqqueue:store_queue(Q2)
-                                 end),
+                               store_queue(Q2),
                                BQS
                        end, State).
 
@@ -1890,4 +1879,48 @@ update_ha_mode(State) ->
 confirm_to_sender(Pid, QName, MsgSeqNos) ->
     rabbit_classic_queue:confirm_to_sender(Pid, QName, MsgSeqNos).
 
+update_state(State, QName) ->
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() -> update_state_in_mnesia(State, QName) end,
+      fun() -> update_state_in_khepri(State, QName) end).
 
+update_state_in_mnesia(State, QName) ->
+    rabbit_misc:execute_mnesia_transaction(
+      fun() ->
+              [Q] = mnesia:read({rabbit_queue, QName}),
+              Q2 = amqqueue:set_state(Q, State),
+              %% amqqueue migration:
+              %% The amqqueue was read from this transaction, no need
+              %% to handle migration.
+              rabbit_amqqueue:store_queue(Q2)
+      end).
+
+update_state_in_khepri(State, QName) ->
+    rabbit_misc:execute_mnesia_transaction(
+      fun() ->
+              [Q] = rabbit_amqqueue:lookup_as_list_in_khepri(rabbit_queue, QName),
+              Q2 = amqqueue:set_state(Q, State),
+              %% amqqueue migration:
+              %% The amqqueue was read from this transaction, no need
+              %% to handle migration.
+              rabbit_amqqueue:store_queue_in_khepri(Q2),
+              rabbit_amqqueue:store_queue_ram_in_khepri(Q2)
+      end).
+
+store_queue(Q) ->
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() -> store_queue_in_mnesia(Q) end,
+      fun() -> store_queue_in_khepri(Q) end).
+
+store_queue_in_mnesia(Q) ->
+    rabbit_misc:execute_mnesia_transaction(
+      fun() ->
+              rabbit_amqqueue:store_queue(Q)
+      end).
+
+store_queue_in_khepri(Q) ->
+    rabbit_khepri:transaction(
+      fun() ->
+              rabbit_amqqueue:store_queue_in_khepri(Q),
+              rabbit_amqqueue:store_queue_ram_in_khepri(Q)
+      end).
