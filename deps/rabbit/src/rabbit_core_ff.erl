@@ -260,7 +260,12 @@ delete_table(FeatureName, Tab) ->
                             rabbit_user,
                             rabbit_user_permission,
                             rabbit_topic_permission,
-                            rabbit_runtime_parameters]).
+                            rabbit_runtime_parameters,
+                            rabbit_queue,
+                            rabbit_durable_queue,
+                            rabbit_exchange,
+                            rabbit_durable_exchange,
+                            rabbit_exchange_serial]).
 
 mds_phase1_migration_enable(#{feature_name := FeatureName}) ->
     case ensure_khepri_cluster_matches_mnesia(FeatureName) of
@@ -682,6 +687,7 @@ consume_mnesia_events(FeatureName, Count, Handled) ->
               ok
     end.
 
+%% TODO handle mnesia_runtime_parameters, rabbit_amqqueue, rabbit_exchange
 handle_mnesia_write(NewRecord) when ?is_vhost(NewRecord) ->
     rabbit_vhost:mnesia_write_to_khepri(NewRecord);
 handle_mnesia_write(NewRecord) when is_record(NewRecord, user_permission) ->
@@ -694,6 +700,7 @@ handle_mnesia_write(NewRecord) ->
     true = ?is_internal_user(NewRecord1),
     rabbit_auth_backend_internal:mnesia_write_to_khepri(NewRecord1).
 
+%% TODO handle mnesia_runtime_parameters, rabbit_amqqueue, rabbit_exchange
 handle_mnesia_delete(OldRecord) when ?is_vhost(OldRecord) ->
     rabbit_vhost:mnesia_delete_to_khepri(OldRecord);
 handle_mnesia_delete(OldRecord) when ?is_internal_user(OldRecord) ->
