@@ -279,11 +279,10 @@ init_with_backing_queue_state(Q, BQ, BQS,
     State3.
 
 terminate(shutdown = R,      State = #q{backing_queue = BQ, q = Q0}) ->
-    QName = amqqueue:get_name(Q0),
     rabbit_core_metrics:queue_deleted(qname(State)),
     terminate_shutdown(
     fun (BQS) ->
-        update_state(stopped, QName),
+        update_state(stopped, Q0),
         BQ:terminate(R, BQS)
     end, State);
 terminate({shutdown, missing_owner} = Reason, State) ->
@@ -1879,12 +1878,13 @@ update_ha_mode(State) ->
 confirm_to_sender(Pid, QName, MsgSeqNos) ->
     rabbit_classic_queue:confirm_to_sender(Pid, QName, MsgSeqNos).
 
-update_state(State, QName) ->
+update_state(State, Q) ->
     rabbit_khepri:try_mnesia_or_khepri(
-      fun() -> update_state_in_mnesia(State, QName) end,
-      fun() -> update_state_in_khepri(State, QName) end).
+      fun() -> update_state_in_mnesia(State, Q) end,
+      fun() -> update_state_in_khepri(State, Q) end).
 
-update_state_in_mnesia(State, QName) ->
+update_state_in_mnesia(State, Q0) ->
+    QName = amqqueue:get_name(Q0),
     rabbit_misc:execute_mnesia_transaction(
       fun() ->
               [Q] = mnesia:read({rabbit_queue, QName}),
@@ -1895,8 +1895,9 @@ update_state_in_mnesia(State, QName) ->
               rabbit_amqqueue:store_queue(Q2)
       end).
 
-update_state_in_khepri(State, QName) ->
-    Decorators = rabbit_queue_decorator:list(),
+update_state_in_khepri(State, Q0) ->
+    QName = amqqueue:get_name(Q0),
+    Decorators = rabbit_queue_decorator:active(Q0),
     rabbit_misc:execute_mnesia_transaction(
       fun() ->
               [Q] = rabbit_amqqueue:lookup_as_list_in_khepri(rabbit_queue, QName),
@@ -1905,7 +1906,8 @@ update_state_in_khepri(State, QName) ->
               %% The amqqueue was read from this transaction, no need
               %% to handle migration.
               rabbit_amqqueue:store_queue_in_khepri(Q2),
-              rabbit_amqqueue:store_queue_ram_in_khepri(Q2, Decorators)
+              Q3 = amqqueue:set_decorators(Q2, Decorators),
+              rabbit_amqqueue:store_queue_ram_in_khepri(Q3)
       end).
 
 store_queue(Q) ->
@@ -1920,9 +1922,10 @@ store_queue_in_mnesia(Q) ->
       end).
 
 store_queue_in_khepri(Q) ->
-    Decorators = rabbit_queue_decorator:list(),
+    Decorators = rabbit_queue_decorator:active(Q),
+    Q1 = amqqueue:set_decorators(Q, Decorators),
     rabbit_khepri:transaction(
       fun() ->
               rabbit_amqqueue:store_queue_in_khepri(Q),
-              rabbit_amqqueue:store_queue_ram_in_khepri(Q, Decorators)
+              rabbit_amqqueue:store_queue_ram_in_khepri(Q1)
       end).
