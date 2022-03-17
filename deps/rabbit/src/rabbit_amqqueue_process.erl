@@ -1905,9 +1905,8 @@ update_state_in_khepri(State, Q0) ->
               %% amqqueue migration:
               %% The amqqueue was read from this transaction, no need
               %% to handle migration.
-              rabbit_amqqueue:store_queue_in_khepri(Q2),
               Q3 = amqqueue:set_decorators(Q2, Decorators),
-              rabbit_amqqueue:store_queue_ram_in_khepri(Q3)
+              rabbit_amqqueue:store_queue_in_khepri(Q3)
       end).
 
 store_queue(Q) ->
@@ -1923,9 +1922,8 @@ store_queue_in_mnesia(Q) ->
 
 store_queue_in_khepri(Q) ->
     Decorators = rabbit_queue_decorator:active(Q),
-    Q1 = amqqueue:set_decorators(Q, Decorators),
+    Queue = amqqueue:set_decorators(Q),
     rabbit_khepri:transaction(
       fun() ->
-              rabbit_amqqueue:store_queue_in_khepri(Q),
-              rabbit_amqqueue:store_queue_ram_in_khepri(Q1)
+              rabbit_amqqueue:optimised_store_queue_in_khepri(Queue),
       end).
