@@ -276,7 +276,7 @@ confirm_nack1(Config) ->
                         rabbit_channel:do(Ch, #'queue.bind'{
                                                  queue = QName,
                                                  exchange = <<"amq.direct">>,
-                                                 routing_key = "confirms-magic" }),
+                                                 routing_key = <<"confirms-magic">> }),
                         receive #'queue.bind_ok'{} -> ok
                         after ?TIMEOUT -> throw(failed_to_bind_queue)
                         end
@@ -297,7 +297,7 @@ confirm_nack1(Config) ->
     end,
     %% Publish a message
     rabbit_channel:do(Ch, #'basic.publish'{exchange = <<"amq.direct">>,
-                                           routing_key = "confirms-magic"
+                                           routing_key = <<"confirms-magic">>
                                           },
                       rabbit_basic:build_content(
                         #'P_basic'{delivery_mode = 2}, <<"">>)),

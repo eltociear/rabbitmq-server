@@ -327,25 +327,7 @@ definitions(ram) ->
         {Tab, TabDef} <- definitions()].
 
 definitions() ->
-    PreKhepriDefs = pre_khepri_definitions(),
-    Definitions = [{rabbit_topic_trie_node,
-      [{record_name, topic_trie_node},
-       {attributes, record_info(fields, topic_trie_node)},
-       {type, ordered_set},
-       {match, #topic_trie_node{trie_node = trie_node_match(), _='_'}}]},
-     {rabbit_topic_trie_edge,
-      [{record_name, topic_trie_edge},
-       {attributes, record_info(fields, topic_trie_edge)},
-       {type, ordered_set},
-       {match, #topic_trie_edge{trie_edge = trie_edge_match(), _='_'}}]},
-     {rabbit_topic_trie_binding,
-      [{record_name, topic_trie_binding},
-       {attributes, record_info(fields, topic_trie_binding)},
-       {type, ordered_set},
-       {match, #topic_trie_binding{trie_binding = trie_binding_match(),
-                                   _='_'}}]}
-    ]
-        ++ PreKhepriDefs
+    Definitions = pre_khepri_definitions()
         ++ gm:table_definitions()
         ++ mirrored_supervisor:table_definitions(),
 
@@ -452,7 +434,23 @@ pre_khepri_definitions() ->
        {attributes, record_info(fields, reverse_route)},
        {type, ordered_set},
        {match, #reverse_route{reverse_binding = reverse_binding_match(),
-                              _='_'}}]}
+                              _='_'}}]},
+     {rabbit_topic_trie_node,
+      [{record_name, topic_trie_node},
+       {attributes, record_info(fields, topic_trie_node)},
+       {type, ordered_set},
+       {match, #topic_trie_node{trie_node = trie_node_match(), _='_'}}]},
+     {rabbit_topic_trie_edge,
+      [{record_name, topic_trie_edge},
+       {attributes, record_info(fields, topic_trie_edge)},
+       {type, ordered_set},
+       {match, #topic_trie_edge{trie_edge = trie_edge_match(), _='_'}}]},
+     {rabbit_topic_trie_binding,
+      [{record_name, topic_trie_binding},
+       {attributes, record_info(fields, topic_trie_binding)},
+       {type, ordered_set},
+       {match, #topic_trie_binding{trie_binding = trie_binding_match(),
+                                   _='_'}}]}
     ].
 
 binding_match() ->
