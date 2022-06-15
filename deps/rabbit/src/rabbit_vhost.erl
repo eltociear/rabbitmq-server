@@ -28,9 +28,9 @@
 -export([vhost_down/1]).
 -export([put_vhost/5,
          put_vhost/6]).
--export([clear_data_in_khepri/0,
-         mnesia_write_to_khepri/1,
-         mnesia_delete_to_khepri/1]).
+-export([clear_data_in_khepri/2,
+         mnesia_write_to_khepri/3,
+         mnesia_delete_to_khepri/3]).
 -export([khepri_vhosts_path/0,
          khepri_vhost_path/1]).
 
@@ -877,14 +877,14 @@ clear_permissions_in_khepri(VHost, ActingUser) ->
     ok = rabbit_auth_backend_internal:clear_vhost_topic_permissions_in_khepri(
            VHost, ActingUser).
 
-clear_data_in_khepri() ->
+clear_data_in_khepri(rabbit_vhost, _ExtraArgs) ->
     Path = khepri_vhosts_path(),
     case rabbit_khepri:delete(Path) of
         {ok, _} -> ok;
         Error -> throw(Error)
     end.
 
-mnesia_write_to_khepri(VHost) when ?is_vhost(VHost) ->
+mnesia_write_to_khepri(rabbit_vhost, VHost, _ExtraArgs) when ?is_vhost(VHost) ->
     Name = vhost:get_name(VHost),
     Path = khepri_vhost_path(Name),
     case rabbit_khepri:put(Path, VHost) of
@@ -892,7 +892,7 @@ mnesia_write_to_khepri(VHost) when ?is_vhost(VHost) ->
         Error -> throw(Error)
     end.
 
-mnesia_delete_to_khepri(VHost) when ?is_vhost(VHost) ->
+mnesia_delete_to_khepri(rabbit_vhost, VHost, _ExtraArgs) when ?is_vhost(VHost) ->
     Name = vhost:get_name(VHost),
     Path = khepri_vhost_path(Name),
     case rabbit_khepri:delete(Path) of
