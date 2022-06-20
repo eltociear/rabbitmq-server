@@ -1145,14 +1145,7 @@ mnesia_write_to_khepri(rabbit_topic_trie_edge, _, _ExtraArgs) ->
     %% as Khepri stores each topic binding as a single path
     ok;
 mnesia_write_to_khepri(rabbit_listener, Listener, _ExtraArgs) ->
-    add_listener_in_khepri(Listener);
-mnesia_write_to_khepri(_Table, Entry, #{type := tracking, name := Name, node := Node,
-                                        key := KeyPos}) ->
-    khepri_create(khepri_tracking_path(Name, Node, as_list(element(KeyPos, Entry))), Entry);
-mnesia_write_to_khepri(_Table, Entry, #{type := tracking_counter, name := Name, node := Node,
-                                        key := KeyPos, counter := CounterPos}) ->
-    khepri_create(khepri_tracking_path(Name, Node, as_list(element(KeyPos, Entry))),
-                  element(CounterPos, Entry)).
+    add_listener_in_khepri(Listener).
 
 mnesia_delete_to_khepri(rabbit_queue, Q, _ExtraArgs) when ?is_amqqueue(Q) ->
     khepri_delete(khepri_queue_path(amqqueue:get_name(Q)));
