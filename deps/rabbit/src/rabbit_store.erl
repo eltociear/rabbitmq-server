@@ -61,7 +61,42 @@
 -export([list_exchanges_in_khepri_tx/1,
          lookup_queue_in_khepri_tx/1]).
 
+-export([mnesia_write_to_khepri/3,
+         mnesia_delete_to_khepri/3,
+         clear_data_in_khepri/2]).
+
+-export([init/0, sync/0]).
+
 -define(WAIT_SECONDS, 30).
+
+%% Clustering used on the boot steps
+
+init() ->
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() ->
+              rabbit_mnesia:init()
+      end,
+      fun() ->
+              khepri_init()
+      end).
+
+khepri_init() ->
+    case rabbit_khepri:members() of
+        [] ->
+            timer:sleep(1000),
+            khepri_init();
+        Members ->
+            rabbit_log:warning("Found the following metadata store members: ~p", [Members])
+    end.
+
+sync() ->
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() ->
+              rabbit_sup:start_child(mnesia_sync)
+      end,
+      fun() ->
+              ok
+      end).
 
 %% Paths
 %% --------------------------------------------------------------
@@ -410,7 +445,8 @@ list_bindings(VHost) ->
               [B || #route{binding = B} <- list_in_mnesia(rabbit_route, Match)]
       end,
       fun() ->
-              Path = khepri_routes_path() ++ [VHost, ?STAR_STAR],
+              Condition = #if_not{condition = #if_data_matches{pattern = #{status => down}}},
+              Path = khepri_routes_path() ++ [VHost, ?STAR_STAR, Condition],
               lists:foldl(fun(#{bindings := SetOfBindings}, Acc) ->
                                   sets:to_list(SetOfBindings) ++ Acc
                           end, [], list_in_khepri(Path))
@@ -501,7 +537,16 @@ recover_bindings(RecoverFun) ->
                         Dst = destination_from_khepri_path(Path),
                         Src = source_from_khepri_path(Path),
                         RecoverFun(Path, Src, Dst, fun recover_semi_durable_route_txn/3, khepri)
-                end, Map)
+                end, Map),
+              {ok, MaybeDown} = rabbit_khepri:match_and_get_data(
+                                  Root ++ [?STAR_STAR, #if_data_matches{pattern = #{type => durable}}]),
+              rabbit_khepri:transaction(
+                fun() ->
+                        maps:foreach(
+                          fun(K, V) ->
+                                  {ok, _} = khepri_tx:put(K, V#{status => up})
+                          end, MaybeDown)
+                end)
       end).
 
 %% Implicit bindings are implicit as of rabbitmq/rabbitmq-server#1721.
@@ -1194,17 +1239,7 @@ mnesia_delete_to_khepri(rabbit_topic_trie_node, #topic_trie_node{}, _ExtraArgs) 
     ok;
 mnesia_delete_to_khepri(rabbit_topic_trie_edge, #topic_trie_edge{}, _ExtraArgs) ->
     %% TODO see above
-    ok;
-mnesia_delete_to_khepri(_Table, Record, #{type := tracking, name := Name, node := Node,
-                                          key := KeyPos}) when size(Record) > 2 ->
-    khepri_delete(khepri_tracking_path(Name, Node, as_list(element(KeyPos, Record))));
-mnesia_delete_to_khepri(_Table, Key, #{type := tracking, name := Name, node := Node}) ->
-    khepri_delete(khepri_tracking_path(Name, Node, as_list(Key)));
-mnesia_delete_to_khepri(_Table, Record, #{type := tracking_counter, name := Name, node := Node,
-                                          key := KeyPos}) when size(Record) > 2 ->
-    khepri_delete(khepri_tracking_path(Name, Node, as_list(element(KeyPos, Record))));
-mnesia_delete_to_khepri(_Table, Key, #{type := tracking_counter, name := Name, node := Node}) ->
-    khepri_delete(khepri_tracking_path(Name, Node, as_list(Key))).
+    ok.
 
 clear_data_in_khepri(rabbit_queue, _ExtraArgs) ->
     khepri_delete(khepri_queues_path());
@@ -1235,11 +1270,7 @@ clear_data_in_khepri(rabbit_topic_trie_binding, _ExtraArgs) ->
 clear_data_in_khepri(rabbit_topic_trie_node, _ExtraArgs) ->
     ok;
 clear_data_in_khepri(rabbit_topic_trie_edge, _ExtraArgs) ->
-    ok;
-clear_data_in_khepri(_Table, #{type := tracking, name := Name, node := Node}) ->
-    khepri_delete(khepri_tracking_path(Name, Node));
-clear_data_in_khepri(_Table, #{type := tracking_counter, name := Name, node := Node}) ->
-    khepri_delete(khepri_tracking_path(Name, Node)).
+    ok.
 
 %% Internal
 %% -------------------------------------------------------------
@@ -1578,7 +1609,7 @@ bindings_data(Path, BindingType) ->
         {ok, #{Path := #{data := Data}}} ->
             Data;
         _ ->
-            #{bindings => sets:new(), type => BindingType}
+            #{bindings => sets:new(), type => BindingType, status => up}
     end.
 
 store_binding(Binding, BindingType) ->
@@ -2291,8 +2322,17 @@ delete_transient_queue_in_mnesia(QName) ->
     remove_transient_bindings_for_destination_in_mnesia(QName).
 
 delete_transient_queue_in_khepri(QName) ->
+    %% A durable classic queue with only one replica might be removed from
+    %% the transient queue table on node down. As it is durable, so are its bindings.
+    %% To avoid these bindings to be listed while the queue is down, we need to mark
+    %% them appropiately. 
+    mark_durable_bindings_down_for_destination_in_khepri(QName),
     {ok, _} = khepri_tx:delete(khepri_queue_path(QName)),
     remove_transient_bindings_for_destination_in_khepri(QName).
+
+mark_durable_bindings_down_for_destination_in_khepri(DstName) ->
+    TransientBindingsMap = match_destination_in_khepri(DstName, durable),
+    maps:foreach(fun(K, V) -> khepri_tx:put(K, V#{status => down}) end, TransientBindingsMap).
 
 update_queue_in_mnesia(Name, Fun) ->
     case mnesia:wread({rabbit_queue, Name}) of
@@ -2428,11 +2468,6 @@ retry(Fun, Until) ->
                     retry(Fun, Until)
             end
     end.
-
-as_list(T) when is_tuple(T) ->
-    tuple_to_list(T);
-as_list(Any) ->
-    [Any].
 
 khepri_create(Path, Value) ->
     case rabbit_khepri:create(Path, Value) of
