@@ -74,6 +74,12 @@ def rabbitmq_external_deps(rabbitmq_workspace = "@rabbitmq-server"):
         ],
     )
 
+    hex_pm_erlang_app(
+        name = "opentelemetry_exporter",
+        version = "1.0.4",
+        sha256 = "61da65290fbb6cac3459b84b8cd630795bf608df93a2b2cc49251cae78200e5e",
+    )
+
     http_archive(
         name = "emqttc",
         urls = ["https://github.com/rabbitmq/emqttc/archive/remove-logging.zip"],
