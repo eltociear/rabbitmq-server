@@ -853,10 +853,10 @@ deliver0(Correlation, Msg, QState0) ->
     rabbit_fifo_client:enqueue(Correlation,
                                Msg, QState0).
 
-deliver(QSs, #basic_message{content = Content0} = Msg0, Options) ->
+deliver(QSs, Msg, Options) ->
     Correlation = maps:get(correlation, Options, undefined),
-    Content = prepare_content(Content0),
-    Msg = Msg0#basic_message{content = Content},
+    % Content = prepare_content(Content0),
+    % Msg = Msg0#basic_message{content = Content},
     lists:foldl(
       fun({Q, stateless}, {Qs, Actions}) ->
               QRef = amqqueue:get_pid(Q),

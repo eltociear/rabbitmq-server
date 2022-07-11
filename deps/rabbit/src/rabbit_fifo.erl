@@ -2265,6 +2265,10 @@ message_size(#basic_message{content = Content}) ->
     iolist_size(PFR);
 message_size(B) when is_binary(B) ->
     byte_size(B);
+message_size(Msg) when element(1, Msg) == mc ->
+    %% TODO: provide guard macro for mc
+    {_, PayloadSize} = mc:size(Msg),
+    PayloadSize;
 message_size(Msg) ->
     %% probably only hit this for testing so ok to use erts_debug
     erts_debug:size(Msg).

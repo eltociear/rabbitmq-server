@@ -405,11 +405,12 @@ info_all(VHostPath, Items, Ref, AggregatorPid) ->
     rabbit_control_misc:emitting_map(
       AggregatorPid, Ref, fun(X) -> info(X, Items) end, list(VHostPath)).
 
--spec route(rabbit_types:exchange(), rabbit_types:message()) ->
+-spec route(rabbit_types:exchange(), mc:state()) ->
     [rabbit_amqqueue:name() | {virtual_reply_queue, binary()}].
 route(#exchange{name = #resource{virtual_host = VHost, name = RName} = XName,
                 decorators = Decorators} = X,
-      #basic_message{routing_keys = RKs} = Message) ->
+      Message) ->
+    RKs = mc:get_annotation(routing_keys, Message),
     case RName of
         <<>> ->
             [begin

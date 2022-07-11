@@ -267,6 +267,7 @@ add_delivery_count_header(#basic_message{} = Msg0, Count)
   when is_integer(Count) ->
     rabbit_basic:add_header(<<"x-delivery-count">>, long, Count, Msg0);
 add_delivery_count_header(Msg, _Count) ->
+    %% TODO: mc
     Msg.
 
 

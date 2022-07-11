@@ -1371,7 +1371,7 @@ inform_listeners_eol(_, _) ->
 
 eval_listeners(MachineVersion, #stream{listeners = Listeners0,
                                        queue_ref = QRef,
-                                       members = Members} = Stream, Effects0) 
+                                       members = Members} = Stream, Effects0)
   when MachineVersion =< 1 ->
     case find_leader(Members) of
         {#member{state = {running, _, LeaderPid}}, _} ->

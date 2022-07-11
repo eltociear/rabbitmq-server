@@ -475,7 +475,8 @@ module(QRef, State) ->
             {error, not_found}
     end.
 
--spec deliver([amqqueue:amqqueue()], Delivery :: term(),
+-spec deliver([amqqueue:amqqueue()],
+              Message :: mc:state(),
               delivery_options(),
               stateless | state()) ->
     {ok, state(), actions()} | {error, Reason :: term()}.
