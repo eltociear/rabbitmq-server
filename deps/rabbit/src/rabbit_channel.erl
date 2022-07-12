@@ -1324,7 +1324,7 @@ handle_method(#'basic.publish'{exchange    = ExchangeNameBin,
     Message = mc:init(rabbit_mc_amqp_legacy,
                       DecodedContent,
                       #{routing_keys => [RoutingKey],
-                        exchange => ExchangeName}),
+                        exchange => ExchangeNameBin}),
     % case rabbit_basic:message_no_id(ExchangeName, RoutingKey, DecodedContent) of
     %     {ok, Message} ->
     QNames = rabbit_exchange:route(Exchange, Message),
@@ -1339,7 +1339,7 @@ handle_method(#'basic.publish'{exchange    = ExchangeNameBin,
     DQ = {Message, DeliveryOptions, Queues},
     {noreply, case Tx of
                   none ->
-                      deliver_to_queues(DQ, State1);
+                      deliver_to_queues(ExchangeName, DQ, State1);
                   {Msgs, Acks} ->
                       Msgs1 = ?QUEUE:in(DQ, Msgs),
                       State1#ch{tx = {Msgs1, Acks}}
@@ -2172,11 +2172,16 @@ notify_limiter(Limiter, Acked) ->
                  end
     end.
 
-deliver_to_queues({Message,
-                   Options,
-                   _RoutedToQueues = []}, State)
+deliver_to_queues({Message, _Options, _RoutedToQueues = []} = Delivery,
+                  #ch{cfg = #conf{virtual_host = VHost}} = State) ->
+    XNameBin = mc:get_annotation(exchange, Message),
+    XName = rabbit_misc:r(VHost, exchange,  XNameBin),
+    deliver_to_queues(XName, Delivery, State).
+
+deliver_to_queues(XName,
+                  {_Message, Options, _RoutedToQueues = []},
+                  State)
   when not is_map_key(correlation, Options) -> %% optimisation when there are no queues
-    XName = mc:get_annotation(exchange, Message),
     ?INCR_STATS(exchange_stats, XName, 1, publish, State),
     rabbit_global_counters:messages_unroutable_dropped(amqp091, 1),
     ?INCR_STATS(exchange_stats, XName, 1, drop_unroutable, State),
@@ -2217,9 +2222,9 @@ deliver_to_queues({Message,
 %               "Stream coordinator unavailable for ~s",
 %               [rabbit_misc:rs(Resource)])
 %     end;
-deliver_to_queues({Message,
-                   Options,
-                   RoutedToQueues}, State0 = #ch{queue_states = QueueStates0}) ->
+deliver_to_queues(XName,
+                  {Message, Options, RoutedToQueues},
+                  State0 = #ch{queue_states = QueueStates0}) ->
     Qs = rabbit_amqqueue:prepend_extra_bcc(RoutedToQueues),
     case rabbit_queue_type:deliver(Qs, Message, Options, QueueStates0) of
         {ok, QueueStates, Actions}  ->
@@ -2228,7 +2233,6 @@ deliver_to_queues({Message,
             rabbit_global_counters:messages_routed(amqp091, length(Qs)),
             %% NB: the order here is important since basic.returns must be
             %% sent before confirms.
-            XName = mc:get_annotation(exchange, Message),
             State1 = process_routing_confirm(MsgSeqNo, QueueNames, XName, State0),
             %% Actions must be processed after registering confirms as actions may
             %% contain rejections of publishes
@@ -2764,13 +2768,13 @@ handle_deliver0(ConsumerTag, AckRequired,
                            next_tag   = DeliveryTag,
                            queue_states = Qs}) ->
     [RoutingKey | _] = mc:get_annotation(routing_keys, MsgCont0),
-    ExchangeName = mc:get_annotation(exchange, MsgCont0),
+    ExchangeNameBin = mc:get_annotation(exchange, MsgCont0),
     MsgCont = mc:convert(rabbit_mc_amqp_legacy, MsgCont0),
     Content = mc:content(MsgCont),
     Deliver = #'basic.deliver'{consumer_tag = ConsumerTag,
                                delivery_tag = DeliveryTag,
                                redelivered  = Redelivered,
-                               exchange     = ExchangeName,
+                               exchange     = ExchangeNameBin,
                                routing_key  = RoutingKey},
     {ok, QueueType} = rabbit_queue_type:module(QName, Qs),
     case QueueType of
@@ -2802,7 +2806,7 @@ handle_basic_get(WriterPid, DeliveryTag, NoAck, MessageCount,
            WriterPid,
            #'basic.get_ok'{delivery_tag  = DeliveryTag,
                            redelivered   = Redelivered,
-                           exchange      = ExchangeName#resource.name,
+                           exchange      = ExchangeName,
                            routing_key   = RoutingKey,
                            message_count = MessageCount},
            Content),

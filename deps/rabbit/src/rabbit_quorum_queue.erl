@@ -1684,18 +1684,18 @@ notify_decorators(QName, F, A) ->
     end.
 
 %% remove any data that a quorum queue doesn't need
-prepare_content(#content{properties = none} = Content) ->
-    Content;
-prepare_content(#content{protocol = none} = Content) ->
-    Content;
-prepare_content(#content{properties = #'P_basic'{expiration = undefined} = Props,
-                         protocol = Proto} = Content) ->
-    Content#content{properties = none,
-                    properties_bin = Proto:encode_properties(Props)};
-prepare_content(Content) ->
-    %% expiration is set. Therefore, leave properties decoded so that
-    %% rabbit_fifo can directly parse it without having to decode again.
-    Content.
+% prepare_content(#content{properties = none} = Content) ->
+%     Content;
+% prepare_content(#content{protocol = none} = Content) ->
+%     Content;
+% prepare_content(#content{properties = #'P_basic'{expiration = undefined} = Props,
+%                          protocol = Proto} = Content) ->
+%     Content#content{properties = none,
+%                     properties_bin = Proto:encode_properties(Props)};
+% prepare_content(Content) ->
+%     %% expiration is set. Therefore, leave properties decoded so that
+%     %% rabbit_fifo can directly parse it without having to decode again.
+%     Content.
 
 erpc_timeout(Node, _)
   when Node =:= node() ->

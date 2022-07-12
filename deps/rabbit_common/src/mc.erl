@@ -7,8 +7,14 @@
 
 
          get_annotation/2,
+         set_annotation/3,
+         %% properties
+         is_persistent/1,
+         ttl/1,
+         %%
          convert/2,
-         content/1
+         content/1,
+         prepare/1
          ]).
 
 -define(NIL, []).
@@ -72,6 +78,10 @@
 -callback content(proto_state()) ->
     proto_content().
 
+%% all protocol must be able to convert to amqp (1.0)
+-callback convert(protocol(), proto_state()) ->
+    proto_state() | not_supported.
+
 %%% API
 
 -spec init(protocol(), term(), annotations()) -> state().
@@ -91,15 +101,40 @@ size(#?MODULE{cfg = #cfg{protocol = Proto},
     Proto:size(Data).
 
 
+-spec get_annotation(ann_key(), state()) -> ann_value() | undefined.
 get_annotation(Key, #?MODULE{annotations = Anns}) ->
     maps:get(Key, Anns, undefined).
 
+-spec set_annotation(ann_key(), ann_value(), state()) ->
+    state().
+set_annotation(Key, Value, #?MODULE{annotations = Anns} = State) ->
+    State#?MODULE{annotations = maps:put(Key, Value, Anns)}.
+
+-spec is_persistent(state()) -> boolean().
+is_persistent(#?MODULE{cfg = #cfg{protocol = Proto},
+                       data = Data}) ->
+    {Result, _} = Proto:get_property(durable, Data),
+    Result.
+
+-spec ttl(state()) -> boolean().
+ttl(#?MODULE{cfg = #cfg{protocol = Proto},
+                       data = Data}) ->
+    {Result, _} = Proto:get_property(ttl, Data),
+    Result.
+
+-spec convert(protocol(), state()) -> state().
 convert(Proto, #?MODULE{cfg = #cfg{protocol = Proto}} = State) ->
     State.
 
+-spec content(state()) -> term().
 content(#?MODULE{cfg = #cfg{protocol = Proto},
                  data = Data}) ->
     Proto:content(Data).
+
+
+-spec prepare(state()) -> state().
+prepare(State) ->
+    State.
 
 %% INTERNAL
 

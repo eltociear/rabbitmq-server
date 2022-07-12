@@ -73,7 +73,7 @@ publish(X, Delivery) ->
     ok.
 
 -spec delivery
-        (boolean(), boolean(), rabbit_types:message(), undefined | integer()) ->
+        (boolean(), boolean(), mc:state(), undefined | integer()) ->
             rabbit_types:delivery().
 
 delivery(Mandatory, Confirm, Message, MsgSeqNo) ->

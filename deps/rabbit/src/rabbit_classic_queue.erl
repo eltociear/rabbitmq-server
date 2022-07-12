@@ -297,13 +297,13 @@ settlement_action(Type, QRef, MsgSeqs, Acc) ->
     [{Type, QRef, MsgSeqs} | Acc].
 
 -spec deliver([{amqqueue:amqqueue(), state()}],
-              Delivery :: term(),
+              Delivery :: mc:state(),
               rabbit_queue_type:delivery_options()) ->
     {[{amqqueue:amqqueue(), state()}], rabbit_queue_type:actions()}.
-deliver(Qs0, #basic_message{} = Msg0, Options) ->
+deliver(Qs0, Msg0, Options) ->
     %% add guid to content here instead of in rabbit_basic:message/3,
     %% as classic queues are the only ones that need it
-    Msg = Msg0#basic_message{id = rabbit_guid:gen()},
+    Msg = mc:set_annotation(id, rabbit_guid:gen(), Msg0),
     Mandatory = maps:get(mandatory, Options, false),
     MsgSeqNo = maps:get(correlation, Options, undefined),
     Flow = maps:get(flow, Options, false),

@@ -590,8 +590,8 @@ init(Q, Terms, AsyncCallback, MsgOnDiskFun, MsgIdxOnDiskFun, MsgAndIdxOnDiskFun)
                                                VHost),
                      {C, fun (MsgId) when is_binary(MsgId) ->
                                  rabbit_msg_store:contains(MsgId, C);
-                             (#basic_message{is_persistent = Persistent}) ->
-                                 Persistent
+                             (Msg) ->
+                                 mc:is_persistent(Msg)
                          end};
             false -> {undefined, fun(_MsgId) -> false end}
         end,
@@ -1091,7 +1091,8 @@ set_queue_mode(_, State) ->
     State.
 
 zip_msgs_and_acks(Msgs, AckTags, Accumulator, _State) ->
-    lists:foldl(fun ({{#basic_message{ id = Id }, _Props}, AckTag}, Acc) ->
+    lists:foldl(fun ({{Msg, _Props}, AckTag}, Acc) ->
+                        Id = mc:get_annotation(id, Msg),
                         [{Id, AckTag} | Acc]
                 end, Accumulator, lists:zip(Msgs, AckTags)).
 
@@ -1239,8 +1240,9 @@ convert_from_v1_to_v2_loop(QueueName, V1Index0, V2Index0, V2Store0,
     garbage_collect(),
     {V2Index3, V2Store3} = lists:foldl(fun
         %% Move embedded messages to the per-queue store.
-        ({Msg = #basic_message{id = MsgId}, SeqId, rabbit_queue_index, Props, IsPersistent},
+        ({Msg, SeqId, rabbit_queue_index, Props, IsPersistent},
          {V2Index1, V2Store1}) ->
+            MsgId = mc:get_annotation(id, Msg),
             {MsgLocation, V2Store2} = rabbit_classic_queue_store_v2:write(SeqId, Msg, Props, V2Store1),
             V2Index2 = case SkipFun(SeqId, V2Index1) of
                 {skip, V2Index1a} ->
@@ -1605,7 +1607,8 @@ gb_sets_maybe_insert(false, _Val, Set) -> Set;
 gb_sets_maybe_insert(true,   Val, Set) -> gb_sets:add(Val, Set).
 
 msg_status(Version, IsPersistent, IsDelivered, SeqId,
-           Msg = #basic_message {id = MsgId}, MsgProps, IndexMaxSize) ->
+           Msg, MsgProps, IndexMaxSize) ->
+    MsgId = mc:get_annotation(id, Msg),
     #msg_status{seq_id        = SeqId,
                 msg_id        = MsgId,
                 msg           = Msg,
@@ -1618,8 +1621,9 @@ msg_status(Version, IsPersistent, IsDelivered, SeqId,
                 persist_to    = determine_persist_to(Version, Msg, MsgProps, IndexMaxSize),
                 msg_props     = MsgProps}.
 
-beta_msg_status({Msg = #basic_message{id = MsgId},
+beta_msg_status({Msg,
                  SeqId, rabbit_queue_index, MsgProps, IsPersistent}) ->
+    MsgId = mc:get_annotation(id, Msg),
     MS0 = beta_msg_status0(SeqId, MsgProps, IsPersistent),
     MS0#msg_status{msg_id       = MsgId,
                    msg          = Msg,
@@ -1931,7 +1935,7 @@ read_msg(SeqId, _, _, MsgLocation, State = #vqstate{ store_state = StoreState0 }
     {Msg, State#vqstate{ store_state = StoreState }};
 read_msg(_, MsgId, IsPersistent, rabbit_msg_store, State = #vqstate{msg_store_clients = MSCState,
                                                                     disk_read_count   = Count}) ->
-    {{ok, Msg = #basic_message {}}, MSCState1} =
+    {{ok, Msg}, MSCState1} =
         msg_store_read(MSCState, IsPersistent, MsgId),
     {Msg, State #vqstate {msg_store_clients = MSCState1,
                           disk_read_count   = Count + 1}}.
@@ -2268,7 +2272,7 @@ process_delivers_and_acks_fun(_) ->
 %% Internal gubbins for publishing
 %%----------------------------------------------------------------------------
 
-publish1(Msg = #basic_message { is_persistent = IsPersistent, id = MsgId },
+publish1(Msg,
          MsgProps = #message_properties { needs_confirming = NeedsConfirming },
          IsDelivered, _ChPid, _Flow, PersistFun,
          State = #vqstate { q1 = Q1, q3 = Q3, q4 = Q4,
@@ -2280,6 +2284,8 @@ publish1(Msg = #basic_message { is_persistent = IsPersistent, id = MsgId },
                             in_counter          = InCount,
                             durable             = IsDurable,
                             unconfirmed         = UC }) ->
+    MsgId = mc:get_annotation(id, Msg),
+    IsPersistent = mc:is_persistent(Msg),
     IsPersistent1 = IsDurable andalso IsPersistent,
     MsgStatus = msg_status(Version, IsPersistent1, IsDelivered, SeqId, Msg, MsgProps, IndexMaxSize),
     %% Unlike what the comment at the top of the file says, it is possible to
@@ -2297,18 +2303,20 @@ publish1(Msg = #basic_message { is_persistent = IsPersistent, id = MsgId },
                           next_deliver_seq_id = maybe_next_deliver_seq_id(SeqId, NextDeliverSeqId, IsDelivered),
                           in_counter          = InCount1,
                           unconfirmed         = UC1 });
-publish1(Msg = #basic_message { is_persistent = IsPersistent, id = MsgId },
-             MsgProps = #message_properties { needs_confirming = NeedsConfirming },
-             IsDelivered, _ChPid, _Flow, PersistFun,
-             State = #vqstate { mode                = lazy,
-                                version             = Version,
-                                qi_embed_msgs_below = IndexMaxSize,
-                                next_seq_id         = SeqId,
-                                next_deliver_seq_id = NextDeliverSeqId,
-                                in_counter          = InCount,
-                                durable             = IsDurable,
-                                unconfirmed         = UC,
-                                delta               = Delta}) ->
+publish1(Msg,
+         MsgProps = #message_properties { needs_confirming = NeedsConfirming },
+         IsDelivered, _ChPid, _Flow, PersistFun,
+         State = #vqstate { mode                = lazy,
+                            version             = Version,
+                            qi_embed_msgs_below = IndexMaxSize,
+                            next_seq_id         = SeqId,
+                            next_deliver_seq_id = NextDeliverSeqId,
+                            in_counter          = InCount,
+                            durable             = IsDurable,
+                            unconfirmed         = UC,
+                            delta               = Delta}) ->
+    MsgId = mc:get_annotation(id, Msg),
+    IsPersistent = mc:is_persistent(Msg),
     IsPersistent1 = IsDurable andalso IsPersistent,
     MsgStatus = msg_status(Version, IsPersistent1, IsDelivered, SeqId, Msg, MsgProps, IndexMaxSize),
     {MsgStatus1, State1} = PersistFun(true, true, MsgStatus, State),
@@ -2331,8 +2339,7 @@ batch_publish1({Msg, MsgProps, IsDelivered}, {ChPid, Flow, State}) ->
     {ChPid, Flow, publish1(Msg, MsgProps, IsDelivered, ChPid, Flow,
                            fun maybe_prepare_write_to_disk/4, State)}.
 
-publish_delivered1(Msg = #basic_message { is_persistent = IsPersistent,
-                                          id = MsgId },
+publish_delivered1(Msg,
                    MsgProps = #message_properties {
                                  needs_confirming = NeedsConfirming },
                    _ChPid, _Flow, PersistFun,
@@ -2345,6 +2352,8 @@ publish_delivered1(Msg = #basic_message { is_persistent = IsPersistent,
                                       in_counter          = InCount,
                                       durable             = IsDurable,
                                       unconfirmed         = UC }) ->
+    MsgId = mc:get_annotation(id, Msg),
+    IsPersistent = mc:is_persistent(Msg),
     IsPersistent1 = IsDurable andalso IsPersistent,
     MsgStatus = msg_status(Version, IsPersistent1, true, SeqId, Msg, MsgProps, IndexMaxSize),
     {MsgStatus1, State1} = PersistFun(false, false, MsgStatus, State),
@@ -2357,8 +2366,7 @@ publish_delivered1(Msg = #basic_message { is_persistent = IsPersistent,
                                      in_counter          = InCount  + 1,
                                      unconfirmed         = UC1 }),
     {SeqId, State3};
-publish_delivered1(Msg = #basic_message { is_persistent = IsPersistent,
-                                          id = MsgId },
+publish_delivered1(Msg,
                    MsgProps = #message_properties {
                                  needs_confirming = NeedsConfirming },
                    _ChPid, _Flow, PersistFun,
@@ -2371,6 +2379,8 @@ publish_delivered1(Msg = #basic_message { is_persistent = IsPersistent,
                                       in_counter          = InCount,
                                       durable             = IsDurable,
                                       unconfirmed         = UC }) ->
+    MsgId = mc:get_annotation(id, Msg),
+    IsPersistent = mc:is_persistent(Msg),
     IsPersistent1 = IsDurable andalso IsPersistent,
     MsgStatus = msg_status(Version, IsPersistent1, true, SeqId, Msg, MsgProps, IndexMaxSize),
     {MsgStatus1, State1} = PersistFun(true, true, MsgStatus, State),
@@ -2521,9 +2531,10 @@ maybe_prepare_write_to_disk(ForceMsg, ForceIndex0, MsgStatus, State = #vqstate{ 
     maybe_batch_write_index_to_disk(ForceIndex, MsgStatus1, State1).
 
 determine_persist_to(Version,
-                     #basic_message{
-                        content = #content{properties     = Props,
-                                           properties_bin = PropsBin}},
+                     Msg,
+                     % #basic_message{
+                     %    content = #content{properties     = Props,
+                     %                       properties_bin = PropsBin}},
                      #message_properties{size = BodySize},
                      IndexMaxSize) ->
     %% The >= is so that you can set the env to 0 and never persist
@@ -2539,30 +2550,35 @@ determine_persist_to(Version,
     %% case) we can just check their size. If we don't (message came
     %% via the direct client), we make a guess based on the number of
     %% headers.
-    case BodySize >= IndexMaxSize of
-        true  -> msg_store;
-        false -> Est = case is_binary(PropsBin) of
-                           true  -> BodySize + size(PropsBin);
-                           false -> #'P_basic'{headers = Hs} = Props,
-                                    case Hs of
-                                        undefined -> 0;
-                                        _         -> length(Hs)
-                                    end * ?HEADER_GUESS_SIZE + BodySize
-                       end,
-                 case Est >= IndexMaxSize of
-                     true                     -> msg_store;
-                     false when Version =:= 1 -> queue_index;
-                     false when Version =:= 2 -> queue_store
-                 end
-    end.
+
+    {MetaSize, _BodySize} = mc:size(Msg),
+     case BodySize >= IndexMaxSize of
+         true  -> msg_store;
+         false ->
+             Est = MetaSize + BodySize,
+             % Est = case is_binary(PropsBin) of
+             %                true  -> BodySize + size(PropsBin);
+             %                false -> #'P_basic'{headers = Hs} = Props,
+             %                         case Hs of
+             %                             undefined -> 0;
+             %                             _         -> length(Hs)
+             %                         end * ?HEADER_GUESS_SIZE + BodySize
+             %            end,
+             case Est >= IndexMaxSize of
+                 true                     -> msg_store;
+                 false when Version =:= 1 -> queue_index;
+                 false when Version =:= 2 -> queue_store
+             end
+     end.
 
 persist_to(#msg_status{persist_to = To}) -> To.
 
 prepare_to_store(Msg) ->
-    Msg#basic_message{
-      %% don't persist any recoverable decoded properties
-      content = rabbit_binary_parser:clear_decoded_content(
-                  Msg #basic_message.content)}.
+    mc:prepare(Msg).
+    % Msg#basic_message{
+    %   %% don't persist any recoverable decoded properties
+    %   content = rabbit_binary_parser:clear_decoded_content(
+    %               Msg #basic_message.content)}.
 
 %%----------------------------------------------------------------------------
 %% Internal gubbins for acks

@@ -407,7 +407,8 @@ info_all(VHostPath, Items, Ref, AggregatorPid) ->
 
 -spec route(rabbit_types:exchange(), mc:state()) ->
     [rabbit_amqqueue:name() | {virtual_reply_queue, binary()}].
-route(#exchange{name = #resource{virtual_host = VHost, name = RName} = XName,
+route(#exchange{name = #resource{virtual_host = VHost,
+                                 name = RName} = XName,
                 decorators = Decorators} = X,
       Message) ->
     RKs = mc:get_annotation(routing_keys, Message),

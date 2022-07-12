@@ -183,7 +183,7 @@
     {protocol_error, Type :: atom(), Reason :: string(), Args :: term()}.
 
 -callback deliver([{amqqueue:amqqueue(), queue_state()}],
-                  Delivery :: term(),
+                  Delivery :: mc:state(),
                   Options :: delivery_options()) ->
     {[{amqqueue:amqqueue(), queue_state()}], actions()}.
 
