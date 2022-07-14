@@ -40,7 +40,7 @@
          delete_queue/2, internal_delete_queue/3, update_queue/2, lookup_queues/1,
          lookup_queue/1, lookup_durable_queue/1, delete_transient_queues/1,
          update_queue_decorators/1, not_found_or_absent_queue_dirty/1,
-         lookup_durable_queues/1]).
+         lookup_durable_queues/1, exists_queue/1]).
 
 -export([store_queue/2, store_queues/1, store_queue_without_recover/2,
          store_queue_dirty/1]).
@@ -727,6 +727,15 @@ lookup_durable_queues(Names) when is_list(Names) ->
       fun() -> lookup_many(fun khepri_queue_path/1, Names, khepri) end);
 lookup_durable_queues(Name) ->
     lookup_durable_queue(Name).
+
+exists_queue(Name) ->
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() ->
+              ets:member(rabbit_queue, Name)
+      end,
+      fun() ->
+              rabbit_khepri:exists(khepri_queue_path(Name))
+      end).
 
 update_queue(Name, Fun) ->
     rabbit_khepri:try_mnesia_or_khepri(
