@@ -884,7 +884,7 @@ clear_data_in_khepri(rabbit_vhost, _ExtraArgs) ->
         Error -> throw(Error)
     end.
 
-mnesia_write_to_khepri(rabbit_vhost, VHost, _ExtraArgs) when ?is_vhost(VHost) ->
+mnesia_write_to_khepri(rabbit_vhost, [VHost], _ExtraArgs) when ?is_vhost(VHost) ->
     Name = vhost:get_name(VHost),
     Path = khepri_vhost_path(Name),
     case rabbit_khepri:put(Path, VHost) of

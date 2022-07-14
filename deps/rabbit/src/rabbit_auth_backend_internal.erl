@@ -1666,7 +1666,7 @@ clear_data_in_khepri(rabbit_user, _ExtraArgs) ->
 clear_data_in_khepri(_, _ExtraArgs) ->
     ok.
 
-mnesia_write_to_khepri(rabbit_user, User, _ExtraArgs) when ?is_internal_user(User) ->
+mnesia_write_to_khepri(rabbit_user, [User], _ExtraArgs) when ?is_internal_user(User) ->
     Username = internal_user:get_username(User),
     Path = khepri_user_path(Username),
     case rabbit_khepri:put(Path, User) of
@@ -1674,10 +1674,10 @@ mnesia_write_to_khepri(rabbit_user, User, _ExtraArgs) when ?is_internal_user(Use
         Error -> throw(Error)
     end;
 mnesia_write_to_khepri(rabbit_user_permission,
-                       #user_permission{
-                          user_vhost = #user_vhost{
-                                          username = Username,
-                                          virtual_host = VHost}} = UserPermission,
+                       [#user_permission{
+                           user_vhost = #user_vhost{
+                                           username = Username,
+                                           virtual_host = VHost}} = UserPermission],
                        _ExtraArgs) ->
     Path = khepri_user_permission_path(
              #if_all{conditions =
@@ -1692,13 +1692,13 @@ mnesia_write_to_khepri(rabbit_user_permission,
         Error   -> throw(Error)
     end;
 mnesia_write_to_khepri(rabbit_topic_permission,
-                       #topic_permission{
-                          topic_permission_key =
-                              #topic_permission_key{
-                                 user_vhost = #user_vhost{
-                                                 username = Username,
-                                                 virtual_host = VHost},
-                                 exchange = Exchange}} = TopicPermission,
+                       [#topic_permission{
+                           topic_permission_key =
+                               #topic_permission_key{
+                                  user_vhost = #user_vhost{
+                                                  username = Username,
+                                                  virtual_host = VHost},
+                                  exchange = Exchange}} = TopicPermission],
                        _ExtraArgs) ->
     Path = khepri_topic_permission_path(
              #if_all{conditions =

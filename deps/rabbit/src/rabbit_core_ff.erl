@@ -595,10 +595,9 @@ do_copy_from_mnesia_to_khepri(
         _ ->
             ok
     end,
-    case mnesia:dirty_read(Table, Key) of
-        [Record] -> ok = Fun(Record);
-        []       -> ok
-    end,
+    %% rabbit_listener is a bag, so this query might return a list of records
+    Records = mnesia:dirty_read(Table, Key),
+    Fun(Records),
     NextKey = mnesia:dirty_next(Table, Key),
     do_copy_from_mnesia_to_khepri(
       FeatureName, Table, NextKey, Fun, Count, Copied + 1).

@@ -601,14 +601,14 @@ clear_data_in_khepri(rabbit_runtime_parameters, _ExtraArgs) ->
     end.
 
 mnesia_write_to_khepri(rabbit_runtime_parameters,
-  #runtime_parameters{key = {VHost, Comp, Name}} = RuntimeParam, _ExtraArgs) ->
+  [#runtime_parameters{key = {VHost, Comp, Name}} = RuntimeParam], _ExtraArgs) ->
     Path = khepri_vhost_rp_path(VHost, Comp, Name),
     case rabbit_khepri:put(Path, RuntimeParam) of
         {ok, _} -> ok;
         Error -> throw(Error)
     end;
 mnesia_write_to_khepri(rabbit_runtime_parameters,
-  #runtime_parameters{key = Key} = RuntimeParam, _ExtraArgs) ->
+  [#runtime_parameters{key = Key} = RuntimeParam], _ExtraArgs) ->
     Path = khepri_global_rp_path(Key),
     case rabbit_khepri:put(Path, RuntimeParam) of
         {ok, _} -> ok;
