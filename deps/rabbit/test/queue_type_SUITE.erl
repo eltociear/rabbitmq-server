@@ -16,7 +16,8 @@
 all() ->
     [
      {group, classic},
-     {group, quorum}
+     {group, quorum},
+     {group, stream}
     ].
 
 
@@ -29,7 +30,11 @@ all_tests() ->
 groups() ->
     [
      {classic, [], all_tests()},
-     {quorum, [], all_tests()}
+     {quorum, [], all_tests()},
+     {stream, [],
+      [
+       stream
+      ]}
     ].
 
 init_per_suite(Config0) ->
@@ -221,6 +226,38 @@ ack_after_queue_delete(Config) ->
     flush(),
     ok.
 
+stream(Config) ->
+    Server = rabbit_ct_broker_helpers:get_node_config(Config, 0, nodename),
+    Ch = rabbit_ct_client_helpers:open_channel(Config, Server),
+    QName = ?config(queue_name, Config),
+    ?assertEqual({'queue.declare_ok', QName, 0, 0},
+                 declare(Ch, QName, [{<<"x-queue-type">>, longstr,
+                                      ?config(queue_type, Config)}])),
+    #'confirm.select_ok'{} = amqp_channel:call(Ch, #'confirm.select'{}),
+    amqp_channel:register_confirm_handler(Ch, self()),
+    publish_and_confirm(Ch, QName, <<"msg1">>),
+    SubCh = rabbit_ct_client_helpers:open_channel(Config, 1),
+    % ok = subscribe(SubCh, QName, ConsumerTag3),
+
+    qos(SubCh, 10, false),
+    Args = [{<<"x-stream-offset">>, longstr, <<"last">>}],
+    amqp_channel:subscribe(
+      SubCh, #'basic.consume'{queue = QName,
+                              consumer_tag = <<"ctag">>,
+                              arguments = Args},
+      self()),
+    receive
+        {#'basic.deliver'{delivery_tag = T,
+                          redelivered  = false},
+         #amqp_msg{}} ->
+            basic_nack(SubCh, T)
+    after 5000 ->
+              exit(basic_deliver_timeout)
+    end,
+
+
+    ok.
+
 %% Utility
 %%
 delete_queues() ->
@@ -300,3 +337,8 @@ flush() ->
 
 get_global_counters(Config) ->
     rabbit_ct_broker_helpers:rpc(Config, 0, rabbit_global_counters, overview, []).
+
+qos(Ch, Prefetch, Global) ->
+    ?assertMatch(#'basic.qos_ok'{},
+                 amqp_channel:call(Ch, #'basic.qos'{global = Global,
+                                                    prefetch_count = Prefetch})).

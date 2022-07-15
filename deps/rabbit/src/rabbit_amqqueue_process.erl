@@ -998,9 +998,7 @@ subtract_acks(ChPid, AckTags, State = #q{consumers = Consumers}, Fun) ->
                                    run_message_queue(true, Fun(State1))
     end.
 
-message_properties(Message,
-                   Confirm, #q{ttl = TTL}) ->
-    % #content{payload_fragments_rev = PFR} = Content,
+message_properties(Message, Confirm, #q{ttl = TTL}) ->
     {_, Size} = mc:size(Message),
     #message_properties{expiry           = calculate_msg_expiry(Message, TTL),
                         needs_confirming = Confirm == eventually,

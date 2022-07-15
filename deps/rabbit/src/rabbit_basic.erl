@@ -288,6 +288,8 @@ header_routes(HeadersTable) ->
 parse_expiration(#'P_basic'{expiration = undefined}) ->
     {ok, undefined};
 parse_expiration(#'P_basic'{expiration = Expiration}) ->
+    parse_expiration(Expiration);
+parse_expiration(Expiration) when is_binary(Expiration) ->
     case string:to_integer(binary_to_list(Expiration)) of
         {error, no_integer} = E ->
             E;

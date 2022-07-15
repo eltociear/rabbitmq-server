@@ -192,12 +192,15 @@ from_amqp091(#'P_basic'{message_id = MsgId,
                                                <- case Headers of
                                                       undefined -> [];
                                                       _ -> Headers
-                                                  end, not unsupported_header_value_type(T)],
+                                                  end,
+                                               not unsupported_header_value_type(T)],
     %% properties that do not map directly to AMQP 1.0 properties are stored
     %% in application properties
     APC = map_add(utf8, <<"x-basic-type">>, utf8, Type,
                   map_add(utf8, <<"x-basic-app-id">>, utf8, AppId, APC0)),
 
+    %% an alternative woud be to store priority and delivery mode in
+    %% the amqp (1.0) header section using the dura
     MAC = map_add(symbol, <<"x-basic-priority">>, ubyte, Priority,
                   map_add(symbol, <<"x-basic-delivery-mode">>, ubyte, DelMode,
                           map_add(symbol, <<"x-basic-expiration">>, utf8, Expiration, []))),
