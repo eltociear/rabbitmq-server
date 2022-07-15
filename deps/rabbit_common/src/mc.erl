@@ -12,7 +12,7 @@
          ttl/1,
          %%
          convert/2,
-         content/1,
+         protocol_state/1,
          serialize/1,
          prepare/1
          ]).
@@ -56,7 +56,6 @@
               ]).
 
 -type proto_state() :: term().
--type proto_content() :: term().
 -type property() :: user_id |
                     reply_to |
                     message_id |
@@ -83,16 +82,9 @@
     {MetadataSize :: non_neg_integer(),
      PayloadSize :: non_neg_integer()}.
 
--callback set_property(property(), property_value(), proto_state()) ->
-    proto_state().
-
 %% strictly speaking properties ought to be immutable
 -callback get_property(property(), proto_state()) ->
     {property_value(), proto_state()}.
-
-%% Returns the message in it's protocol specific parsed container type
--callback content(proto_state()) ->
-    proto_content().
 
 %% all protocol must be able to convert to amqp (1.0)
 -callback convert(protocol(), proto_state()) ->
@@ -156,17 +148,16 @@ convert(TargetProto, #?MODULE{cfg = #cfg{protocol = Proto},
             AmqpData = Proto:convert(rabbit_mc_amqp, Data),
             %% init the target from a list of amqp sections
             State#?MODULE{cfg = #cfg{protocol = TargetProto},
-                          data = TargetProto:init_amqp(
-                                   rabbit_mc_amqp:content(AmqpData))};
+                          data = TargetProto:init_amqp(AmqpData)};
         TargetState ->
             State#?MODULE{cfg = #cfg{protocol = TargetProto},
                           data = TargetState}
     end.
 
--spec content(state()) -> term().
-content(#?MODULE{cfg = #cfg{protocol = Proto},
+-spec protocol_state(state()) -> term().
+protocol_state(#?MODULE{cfg = #cfg{protocol = _Proto},
                  data = Data}) ->
-    Proto:content(Data).
+    Data.
 
 
 -spec prepare(state()) -> state().

@@ -9,9 +9,7 @@
          init/1,
          init_amqp/1,
          size/1,
-         set_property/3,
          get_property/2,
-         content/1,
          convert/2,
          serialize/2
         ]).
@@ -127,9 +125,6 @@ size(#content{properties_bin = PropsBin,
                end,
     {MetaSize, iolist_size(Payload)}.
 
-set_property(_P, _V, C) ->
-    C.
-
 get_property(durable,
              #content{properties = #'P_basic'{delivery_mode = Mode}} = C) ->
     {Mode == 2, C};
@@ -138,9 +133,6 @@ get_property(ttl, #content{properties = Props} = C) ->
     {MsgTTL, C};
 get_property(_P, C) ->
     {undefined, C}.
-
-content(C) ->
-    C.
 
 convert(?MODULE, C) ->
     C;

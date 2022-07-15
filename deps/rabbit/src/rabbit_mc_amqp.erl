@@ -9,9 +9,7 @@
          init/1,
          init_amqp/1,
          size/1,
-         set_property/3,
          get_property/2,
-         content/1,
          convert/2,
          serialize/2
         ]).
@@ -53,9 +51,6 @@ size(#msg{data = #'v1_0.data'{content = Data}}) ->
     MetaSize = 0,
     {MetaSize, iolist_size(Data)}.
 
-set_property(_P, _V, C) ->
-    C.
-
 get_property(durable, Msg) ->
     case Msg of
         #msg{header = #'v1_0.header'{durable = Durable}}
@@ -86,9 +81,6 @@ get_property(ttl, Msg) ->
     end;
 get_property(_P, Msg) ->
     {undefined, Msg}.
-
-content(C) ->
-    C.
 
 convert(?MODULE, Msg) ->
     Msg;
