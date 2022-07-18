@@ -935,42 +935,9 @@ binary_to_msg(#resource{virtual_host = _VHost,
                         name = _QName}, Data) ->
     mc:init(rabbit_mc_amqp, amqp10_framing:decode_bin(Data), #{}).
 
-    % R0 = rabbit_msg_record:init(Data),
-    % %% if the message annotation isn't present the data most likely came from
-    % %% the rabbitmq-stream plugin so we'll choose defaults that simulate use
-    % %% of the direct exchange
-    % {utf8, Exchange} = rabbit_msg_record:message_annotation(<<"x-exchange">>,
-    %                                                         R0, {utf8, <<>>}),
-    % {utf8, RoutingKey} = rabbit_msg_record:message_annotation(<<"x-routing-key">>,
-    %                                                           R0, {utf8, QName}),
-    % {Props, Payload} = rabbit_msg_record:to_amqp091(R0),
-    % XName = #resource{kind = exchange,
-    %                   virtual_host = VHost,
-    %                   name = Exchange},
-    % Content = #content{class_id = 60,
-    %                    properties = Props,
-    %                    properties_bin = none,
-    %                    payload_fragments_rev = [Payload]},
-    % {ok, Msg} = rabbit_basic:message(XName, RoutingKey, Content),
-    % Msg.
-
-
 msg_to_iodata(Msg0) ->
     Msg = mc:convert(rabbit_mc_amqp, Msg0),
     mc:serialize(Msg).
-
-% msg_to_iodata(#basic_message{exchange_name = #resource{name = Exchange},
-%                              routing_keys = [RKey | _],
-%                              content = Content}) ->
-%     #content{properties = Props,
-%              payload_fragments_rev = Payload} =
-%         rabbit_binary_parser:ensure_content_decoded(Content),
-%     R0 = rabbit_msg_record:from_amqp091(Props, lists:reverse(Payload)),
-%     %% TODO durable?
-%     R = rabbit_msg_record:add_message_annotations(
-%           #{<<"x-exchange">> => {utf8, Exchange},
-%             <<"x-routing-key">> => {utf8, RKey}}, R0),
-%     rabbit_msg_record:to_iodata(R).
 
 capabilities() ->
     #{unsupported_policies => [%% Classic policies

@@ -2791,12 +2791,7 @@ handle_deliver0(ConsumerTag, AckRequired,
     record_sent(deliver, QueueType, ConsumerTag, AckRequired, Msg, State).
 
 handle_basic_get(WriterPid, DeliveryTag, NoAck, MessageCount,
-                 Msg0 = {_QName, _QPid, _MsgId, Redelivered,
-                        MsgCont0
-                        % #basic_message{exchange_name = ExchangeName,
-                        %                routing_keys  = [RoutingKey | _CcRoutes],
-                        %                content       = Content}
-                       },
+                 Msg0 = {_QName, _QPid, _MsgId, Redelivered, MsgCont0},
                  QueueType, State) ->
     [RoutingKey | _] = mc:get_annotation(routing_keys, MsgCont0),
     ExchangeName = mc:get_annotation(exchange, MsgCont0),
