@@ -356,6 +356,16 @@ delete(VHost, ActingUser) ->
     %% eventually the termination of that process. Exchange deletion causes
     %% notifications which must be sent outside the TX
     rabbit_log:info("Deleting vhost '~s'", [VHost]),
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() ->
+              rabbit_misc:execute_mnesia_transaction(
+                with_in_mnesia(
+                  VHost,
+                  fun() -> clear_permissions_in_mnesia(VHost, ActingUser) end))
+      end,
+      fun() ->
+              ok = clear_permissions_in_khepri(VHost, ActingUser)
+      end),
     QDelFun = fun (Q) -> rabbit_amqqueue:delete(Q, false, false, ActingUser) end,
     [begin
          Name = amqqueue:get_name(Q),

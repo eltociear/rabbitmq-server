@@ -715,7 +715,6 @@ vhost_limit_after_node_renamed(Config) ->
 from_mnesia_to_khepri(Config) ->
     VHost = <<"/">>,
     ?assertEqual(0, count_connections_in(Config, VHost)),
-    [Conn] = open_connections(Config, [0]),
     ?awaitMatch(1, count_connections_in(Config, VHost), ?AWAIT, ?INTERVAL),
     case rabbit_ct_broker_helpers:enable_feature_flag(Config, raft_based_metadata_store_phase1) of
         ok ->
