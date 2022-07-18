@@ -866,6 +866,7 @@ transient_queue_on_node_down_mnesia(Config) ->
     ok.
 
 transient_queue_on_node_down_khepri(Config) ->
+    %% All entities are durable in khepri
     Server = rabbit_ct_broker_helpers:get_node_config(Config, 0, nodename),
     
     Ch = rabbit_ct_client_helpers:open_channel(Config, Server),
@@ -907,13 +908,18 @@ transient_queue_on_node_down_khepri(Config) ->
     %% This doesn't work because we only have one route path in Khepri. If we remove it,
     %% we lose the info. If don't, it stays listed. Maybe we need a flag or else??
     %% Used to mark when transient are gone, on recovery flag them as up. Weird at least?
-    ?assertEqual([],
-                 rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>])),
-    ?assertEqual([],
-                 rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_amqqueue, list, [<<"/">>])),
+    ?awaitMatch(Bindings,
+                lists:sort(
+                  rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>])),
+                30000),
+    ?awaitMatch([_, _],
+                 rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_amqqueue, list, [<<"/">>]),
+                30000),
 
     rabbit_ct_broker_helpers:start_node(Config, Server),
 
+    ?awaitMatch([_, _], rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_amqqueue, list, [<<"/">>]),
+                30000),
     ?awaitMatch(Bindings,
                 lists:sort(
                   rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>])),
