@@ -39,9 +39,7 @@
     #'v1_0.footer'{}.
 
 %% the protocol module must implement the mc behaviour
--record(cfg, {protocol :: module()}).
-
--record(?MODULE, {cfg :: #cfg{},
+-record(?MODULE, {protocol :: module(),
                   %% protocol specific data term
                   data :: term(),
                   %% any annotations done by the broker itself
@@ -101,7 +99,7 @@ init(Proto, Data, Anns)
   when is_atom(Proto)
        andalso is_map(Anns) ->
     {ProtoData, AddAnns} = Proto:init(Data),
-    #?MODULE{cfg = #cfg{protocol = Proto},
+    #?MODULE{protocol = Proto,
              data = ProtoData,
              %% not sure what the precedence rule should be for annotations
              %% that are explicitly passed vs annotations that are recovered
@@ -111,7 +109,7 @@ init(Proto, Data, Anns)
 -spec size(state()) ->
     {MetadataSize :: non_neg_integer(),
      PayloadSize :: non_neg_integer()}.
-size(#?MODULE{cfg = #cfg{protocol = Proto},
+size(#?MODULE{protocol = Proto,
               data = Data}) ->
     Proto:size(Data).
 
@@ -126,37 +124,37 @@ set_annotation(Key, Value, #?MODULE{annotations = Anns} = State) ->
     State#?MODULE{annotations = maps:put(Key, Value, Anns)}.
 
 -spec is_persistent(state()) -> boolean().
-is_persistent(#?MODULE{cfg = #cfg{protocol = Proto},
+is_persistent(#?MODULE{protocol = Proto,
                        data = Data}) ->
     {Result, _} = Proto:get_property(durable, Data),
     Result.
 
 -spec ttl(state()) -> boolean().
-ttl(#?MODULE{cfg = #cfg{protocol = Proto},
-                       data = Data}) ->
+ttl(#?MODULE{protocol = Proto,
+             data = Data}) ->
     {Result, _} = Proto:get_property(ttl, Data),
     Result.
 
 -spec convert(protocol(), state()) -> state().
-convert(Proto, #?MODULE{cfg = #cfg{protocol = Proto}} = State) ->
+convert(Proto, #?MODULE{protocol = Proto} = State) ->
     State;
-convert(TargetProto, #?MODULE{cfg = #cfg{protocol = Proto},
+convert(TargetProto, #?MODULE{protocol = Proto,
                               data = Data} = State) ->
     case Proto:convert(TargetProto, Data) of
         not_implemented ->
             %% convert to 1.0 then try again
             AmqpData = Proto:convert(rabbit_mc_amqp, Data),
             %% init the target from a list of amqp sections
-            State#?MODULE{cfg = #cfg{protocol = TargetProto},
+            State#?MODULE{protocol = TargetProto,
                           data = TargetProto:init_amqp(AmqpData)};
         TargetState ->
-            State#?MODULE{cfg = #cfg{protocol = TargetProto},
+            State#?MODULE{protocol = TargetProto,
                           data = TargetState}
     end.
 
 -spec protocol_state(state()) -> term().
-protocol_state(#?MODULE{cfg = #cfg{protocol = _Proto},
-                 data = Data}) ->
+protocol_state(#?MODULE{protocol = _Proto,
+                        data = Data}) ->
     Data.
 
 
@@ -165,7 +163,7 @@ prepare(State) ->
     State.
 
 -spec serialize(state()) -> iodata().
-serialize(#?MODULE{cfg = #cfg{protocol = Proto},
+serialize(#?MODULE{protocol = Proto,
                    annotations = Anns,
                    data = Data}) ->
     Proto:serialize(Data, Anns).
