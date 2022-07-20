@@ -125,7 +125,8 @@ define PROJECT_ENV
       {track_auth_attempt_source, false},
 			{credentials_obfuscation_fallback_secret, <<"nocookie">>},
       {dead_letter_worker_consumer_prefetch, 32},
-      {dead_letter_worker_publisher_confirm_timeout, 180000}
+      {dead_letter_worker_publisher_confirm_timeout, 180000},
+            {khepri_migration_batch, 1000}
 	  ]
 endef
 

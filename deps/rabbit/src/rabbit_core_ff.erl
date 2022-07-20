@@ -558,8 +558,8 @@ unsubscribe_to_mnesia_changes(_, []) ->
 
 copy_from_mnesia_to_khepri(
   FeatureName, [{Table, Mod, ExtraArgs} | Rest]) ->
-    Fun = fun(Entry) ->
-                  Mod:mnesia_write_to_khepri(Table, Entry, ExtraArgs)
+    Fun = fun(Entries) ->
+                  Mod:mnesia_write_to_khepri(Table, Entries, ExtraArgs)
           end,
     do_copy_from_mnesia_to_khepri(FeatureName, Table, Fun),
     copy_from_mnesia_to_khepri(FeatureName, Rest);
@@ -571,9 +571,12 @@ do_copy_from_mnesia_to_khepri(FeatureName, Table, Fun) ->
     ?LOG_DEBUG(
        "Feature flag `~s`:     table ~s: about ~b record(s) to copy",
        [FeatureName, Table, Count]),
-    FirstKey = mnesia:dirty_first(Table),
+    {ok, Batch} = application:get_env(rabbit, khepri_migration_batch),
+    Cont = mnesia:async_dirty(
+             fun () ->
+                     mnesia:select(Table, [{'$1',[],['$1']}], Batch, read) end),
     do_copy_from_mnesia_to_khepri(
-      FeatureName, Table, FirstKey, Fun, Count, 0).
+      FeatureName, Table, Cont, Fun, Count, 0).
 
 do_copy_from_mnesia_to_khepri(
   FeatureName, Table, '$end_of_table', _, Count, Copied) ->
@@ -583,7 +586,7 @@ do_copy_from_mnesia_to_khepri(
        [FeatureName, Table, Copied, Count]),
     ok;
 do_copy_from_mnesia_to_khepri(
-  FeatureName, Table, Key, Fun, Count, Copied) ->
+  FeatureName, Table, {Records, Cont}, Fun, Count, Copied) ->
     %% TODO: Batch several records in a single Khepri insert.
     %% TODO: Can/should we parallelize?
     case Copied rem 100 of
@@ -595,11 +598,10 @@ do_copy_from_mnesia_to_khepri(
             ok
     end,
     %% rabbit_listener is a bag, so this query might return a list of records
-    Records = mnesia:dirty_read(Table, Key),
     Fun(Records),
-    NextKey = mnesia:dirty_next(Table, Key),
+    Next = mnesia:async_dirty(fun() -> mnesia:select(Cont) end),
     do_copy_from_mnesia_to_khepri(
-      FeatureName, Table, NextKey, Fun, Count, Copied + 1).
+      FeatureName, Table, Next, Fun, Count, Copied + length(Records)).
 
 final_sync_from_mnesia_to_khepri(FeatureName, TablesAndOwners) ->
     %% Switch all tables to read-only. All concurrent and future Mnesia

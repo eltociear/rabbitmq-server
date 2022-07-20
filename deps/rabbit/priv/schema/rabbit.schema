@@ -427,6 +427,10 @@ end}.
 {mapping, "ssl_options.bypass_pem_cache", "ssl.bypass_pem_cache",
     [{datatype, {enum, [true, false]}}]}.
 
+
+{mapping, "metadata_store.khepri.migration_batch", "rabbit.khepri_migration_batch",
+    [{datatype, integer}]}.
+
 %% ===========================================================================
 
 %% Choose the available SASL mechanism(s) to expose.
