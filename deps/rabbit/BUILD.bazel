@@ -288,6 +288,11 @@ suites = [
     ),
     rabbitmq_integration_suite(
         PACKAGE,
+        name = "bindings_SUITE",
+        size = "medium",
+    ),
+    rabbitmq_integration_suite(
+        PACKAGE,
         name = "channel_interceptor_SUITE",
         size = "medium",
         additional_srcs = [
@@ -416,6 +421,11 @@ suites = [
     ),
     rabbitmq_integration_suite(
         PACKAGE,
+        name = "exchanges_SUITE",
+        size = "small",
+    ),
+    rabbitmq_integration_suite(
+        PACKAGE,
         name = "feature_flags_SUITE",
         size = "large",
         flaky = True,
@@ -449,6 +459,11 @@ suites = [
         PACKAGE,
         name = "lazy_queue_SUITE",
         size = "medium",
+    ),
+    rabbitmq_integration_suite(
+        PACKAGE,
+        name = "listeners_SUITE",
+        size = "small",
     ),
     rabbitmq_integration_suite(
         PACKAGE,
