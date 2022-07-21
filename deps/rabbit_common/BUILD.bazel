@@ -51,6 +51,10 @@ genrule(
     tools = [":codegen"],
 )
 
+DEPS = [
+    "@khepri//:erlang_app",
+]
+
 RUNTIME_DEPS = [
     "@thoas//:erlang_app",
     "@recon//:erlang_app",
@@ -104,6 +108,7 @@ rabbitmq_app(
         "src/rabbit_framing_amqp_0_9_1.erl",
     ],
     runtime_deps = RUNTIME_DEPS,
+    deps = DEPS,
 )
 
 xref(

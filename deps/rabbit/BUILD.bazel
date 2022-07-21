@@ -510,12 +510,12 @@ suites = [
         PACKAGE,
         name = "metadata_store_phase1_SUITE",
         size = "small",
-        deps = [
-            "@khepri//:erlang_app",
-        ],
         runtime_deps = [
             "@meck//:erlang_app",
             "@ra//:erlang_app",
+        ],
+        deps = [
+            "@khepri//:erlang_app",
         ],
     ),
     rabbitmq_integration_suite(
