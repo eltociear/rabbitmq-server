@@ -40,7 +40,7 @@
          delete_queue/2, internal_delete_queue/3, update_queue/2, lookup_queues/1,
          lookup_queue/1, lookup_durable_queue/1, delete_transient_queues/1,
          update_queue_decorators/1, not_found_or_absent_queue_dirty/1,
-         lookup_durable_queues/1, exists_queue/1]).
+         lookup_durable_queues/1, exists_queue/1, list_queues_by_type/1]).
 
 -export([store_queue/2, store_queues/1, store_queue_without_recover/2,
          store_queue_dirty/1]).
@@ -581,6 +581,16 @@ list_durable_queues_by_type(Type) ->
     rabbit_khepri:try_mnesia_or_khepri(
       fun() ->
               list_in_mnesia(rabbit_durable_queue, Pattern)
+      end,
+      fun() ->
+              list_in_khepri(khepri_queues_path() ++ [#if_data_matches{pattern = Pattern}])
+      end).
+
+list_queues_by_type(Type) ->
+    Pattern = amqqueue:pattern_match_on_type(Type),
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() ->
+              list_in_mnesia(rabbit_queue, Pattern)
       end,
       fun() ->
               list_in_khepri(khepri_queues_path() ++ [#if_data_matches{pattern = Pattern}])
