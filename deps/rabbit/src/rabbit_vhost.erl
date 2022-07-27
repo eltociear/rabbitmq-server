@@ -884,13 +884,18 @@ clear_data_in_khepri(rabbit_vhost, _ExtraArgs) ->
         Error -> throw(Error)
     end.
 
-mnesia_write_to_khepri(rabbit_vhost, [VHost], _ExtraArgs) when ?is_vhost(VHost) ->
-    Name = vhost:get_name(VHost),
-    Path = khepri_vhost_path(Name),
-    case rabbit_khepri:put(Path, VHost) of
-        {ok, _} -> ok;
-        Error -> throw(Error)
-    end.
+mnesia_write_to_khepri(rabbit_vhost, VHosts, _ExtraArgs) ->
+    rabbit_khepri:transaction(
+      fun() ->
+              [begin
+                   Name = vhost:get_name(VHost),
+                   Path = khepri_vhost_path(Name),
+                   case khepri_tx:put(Path, VHost) of
+                       {ok, _} -> ok;
+                       Error -> throw(Error)
+                   end
+               end || VHost <- VHosts]
+      end).
 
 mnesia_delete_to_khepri(rabbit_vhost, VHost, _ExtraArgs) when ?is_vhost(VHost) ->
     Name = vhost:get_name(VHost),

@@ -1666,53 +1666,64 @@ clear_data_in_khepri(rabbit_user, _ExtraArgs) ->
 clear_data_in_khepri(_, _ExtraArgs) ->
     ok.
 
-mnesia_write_to_khepri(rabbit_user, [User], _ExtraArgs) when ?is_internal_user(User) ->
-    Username = internal_user:get_username(User),
-    Path = khepri_user_path(Username),
-    case rabbit_khepri:put(Path, User) of
-        {ok, _} -> ok;
-        Error -> throw(Error)
-    end;
-mnesia_write_to_khepri(rabbit_user_permission,
-                       [#user_permission{
-                           user_vhost = #user_vhost{
-                                           username = Username,
-                                           virtual_host = VHost}} = UserPermission],
-                       _ExtraArgs) ->
-    Path = khepri_user_permission_path(
-             #if_all{conditions =
-                     [Username,
-                      #if_node_exists{exists = true}]},
-             VHost),
-    Extra = #{keep_while =>
-              #{rabbit_vhost:khepri_vhost_path(VHost) =>
-                #if_node_exists{exists = true}}},
-    case rabbit_khepri:put(Path, UserPermission, Extra) of
-        {ok, _} -> ok;
-        Error   -> throw(Error)
-    end;
-mnesia_write_to_khepri(rabbit_topic_permission,
-                       [#topic_permission{
-                           topic_permission_key =
-                               #topic_permission_key{
-                                  user_vhost = #user_vhost{
-                                                  username = Username,
-                                                  virtual_host = VHost},
-                                  exchange = Exchange}} = TopicPermission],
-                       _ExtraArgs) ->
-    Path = khepri_topic_permission_path(
-             #if_all{conditions =
-                     [Username,
-                      #if_node_exists{exists = true}]},
-             VHost,
-             Exchange),
-    Extra = #{keep_while =>
-              #{rabbit_vhost:khepri_vhost_path(VHost) =>
-                #if_node_exists{exists = true}}},
-    case rabbit_khepri:put(Path, TopicPermission, Extra) of
-        {ok, _} -> ok;
-        Error   -> throw(Error)
-    end.
+mnesia_write_to_khepri(rabbit_user, Users, _ExtraArgs) ->
+    rabbit_khepri:transaction(
+      fun() ->
+              [begin
+                   Username = internal_user:get_username(User),
+                   Path = khepri_user_path(Username),
+                   case khepri_tx:put(Path, User) of
+                       {ok, _} -> ok;
+                       Error -> throw(Error)
+                   end
+               end || User <- Users, ?is_internal_user(User)]
+      end, rw);
+mnesia_write_to_khepri(rabbit_user_permission, UserPermissions, _ExtraArgs) ->
+    rabbit_khepri:transaction(
+      fun() ->
+              [begin
+                   Path = khepri_user_permission_path(
+                            #if_all{conditions =
+                                        [Username,
+                                         #if_node_exists{exists = true}]},
+                            VHost),
+                   Extra = #{keep_while =>
+                                 #{rabbit_vhost:khepri_vhost_path(VHost) =>
+                                       #if_node_exists{exists = true}}},
+                   case khepri_tx:put(Path, UserPermission, Extra) of
+                       {ok, _} -> ok;
+                       Error   -> throw(Error)
+                   end
+               end || #user_permission{
+                         user_vhost = #user_vhost{
+                                         username = Username,
+                                         virtual_host = VHost}} = UserPermission <- UserPermissions]
+      end, rw);
+mnesia_write_to_khepri(rabbit_topic_permission, TopicPermissions, _ExtraArgs) ->
+    rabbit_khepri:transaction(
+      fun() ->
+              [begin
+                   Path = khepri_topic_permission_path(
+                            #if_all{conditions =
+                                        [Username,
+                                         #if_node_exists{exists = true}]},
+                            VHost,
+                            Exchange),
+                   Extra = #{keep_while =>
+                                 #{rabbit_vhost:khepri_vhost_path(VHost) =>
+                                       #if_node_exists{exists = true}}},
+                   case khepri_tx:put(Path, TopicPermission, Extra) of
+                       {ok, _} -> ok;
+                       Error   -> throw(Error)
+                   end
+               end || #topic_permission{
+                         topic_permission_key =
+                             #topic_permission_key{
+                                user_vhost = #user_vhost{
+                                                username = Username,
+                                                virtual_host = VHost},
+                                exchange = Exchange}} = TopicPermission <- TopicPermissions]
+      end, rw).
 
 mnesia_delete_to_khepri(rabbit_user, Record, _ExtraArgs) ->
     %% The record and the Mnesia table have different names.
