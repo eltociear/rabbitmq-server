@@ -125,7 +125,10 @@
                         maintenance_mode_status,
                         user_limits,
                         virtual_host_metadata],
-      migration_fun => {?MODULE, mds_phase1_migration}
+      callbacks     => #{enable =>
+                             {?MODULE, mds_phase1_migration_enable},
+                         post_enable =>
+                             {?MODULE, mds_phase1_migration_post_enable}}
      }}).
 
 %% -------------------------------------------------------------------
@@ -283,15 +286,13 @@ delete_table(FeatureName, Tab) ->
 mds_phase1_migration_enable(#{feature_name := FeatureName}) ->
     %% Channel and connection tracking are core features with difference:
     %% tables cannot be predeclared as they include the node name
-    Tables = ?MDS_PHASE1_TABLES ++ rabbit_connection_tracking:mds_tables()
-        ++ rabbit_channel_tracking:mds_tables(),
+    Tables = ?MDS_PHASE1_TABLES,
     mds_migration_enable(FeatureName, Tables).
 
 mds_phase1_migration_post_enable(#{feature_name := FeatureName}) ->
     %% Channel and connection tracking are core features with difference:
     %% tables cannot be predeclared as they include the node name
-    Tables = ?MDS_PHASE1_TABLES ++ rabbit_connection_tracking:mds_tables()
-        ++ rabbit_channel_tracking:mds_tables(),
+    Tables = ?MDS_PHASE1_TABLES,
     mds_migration_post_enable(FeatureName, Tables).
 
 mds_migration_enable(FeatureName, TablesAndOwners) ->
@@ -613,7 +614,10 @@ final_sync_from_mnesia_to_khepri(FeatureName, TablesAndOwners) ->
               ?LOG_DEBUG(
                  "Feature flag `~s`:     switch table ~s to read-only",
                  [FeatureName, Table]),
-              {atomic, ok} = mnesia:change_table_access_mode(Table, read_only)
+                 case mnesia:change_table_access_mode(Table, read_only) of
+                     {atomic, ok} -> ok;
+                     {aborted, {already_exists, _, read_only}} -> ok
+                 end
       end, Tables),
 
     %% During the first round of copy, we received all write events as
