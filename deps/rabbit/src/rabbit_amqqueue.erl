@@ -1845,15 +1845,20 @@ maybe_clear_recoverable_node(Node, Q) ->
 -spec on_node_down(node()) -> 'ok'.
 
 on_node_down(Node) ->
-    {Time, {QueueNames, Deletions}} = timer:tc(fun() -> delete_queues_on_node_down(Node) end),
-    case length(QueueNames) of
-        0 -> ok;
-        _ -> rabbit_log:info("~p transient queues from an old incarnation of node ~p deleted in ~fs", [length(QueueNames), Node, Time/1000000])
-    end,
-    notify_queue_binding_deletions(Deletions),
-    rabbit_core_metrics:queues_deleted(QueueNames),
-    notify_queues_deleted(QueueNames),
-    ok.
+    case rabbit_khepri:is_enabled() of
+        true ->
+            ok;
+        false ->
+            {Time, {QueueNames, Deletions}} = timer:tc(fun() -> delete_queues_on_node_down(Node) end),
+            case length(QueueNames) of
+                0 -> ok;
+                _ -> rabbit_log:info("~p transient queues from an old incarnation of node ~p deleted in ~fs", [length(QueueNames), Node, Time/1000000])
+            end,
+            notify_queue_binding_deletions(Deletions),
+            rabbit_core_metrics:queues_deleted(QueueNames),
+            notify_queues_deleted(QueueNames),
+            ok
+    end.
 
 notify_queue_binding_deletions(QueueDeletions) when is_list(QueueDeletions) ->
     Deletions = rabbit_binding:process_deletions(
