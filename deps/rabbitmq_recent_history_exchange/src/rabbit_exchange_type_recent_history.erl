@@ -20,10 +20,11 @@
 -export([setup_schema/0, disable_plugin/0]).
 -export([info/1, info/2]).
 
--export([mds_migration/3,
-         mnesia_write_to_khepri/3,
-         mnesia_delete_to_khepri/3,
-         clear_data_in_khepri/2]).
+-export([mds_migration_enable/1,
+         mds_migration_post_enable/1,
+         mnesia_write_to_khepri/2,
+         mnesia_delete_to_khepri/2,
+         clear_data_in_khepri/1]).
 
 -rabbit_boot_step({?MODULE,
                    [{description, "exchange type x-recent-history"},
@@ -45,7 +46,8 @@
       doc_url       => "", %% TODO
       stability     => experimental,
       depends_on    => [raft_based_metadata_store_phase1],
-      migration_fun => {?MODULE, mds_migration}
+      callbacks     => #{enable => {?MODULE, mds_migration_enable},
+                         post_enable => {?MODULE, mds_migration_post_enable}}
      }}).
 
 -define(INTEGER_ARG_TYPES, [byte, short, signedint, long]).
@@ -139,11 +141,15 @@ remove_bindings(_Tx, _X, _Bs) -> ok.
 assert_args_equivalence(X, Args) ->
     rabbit_exchange:assert_args_equivalence(X, Args).
 
-mds_migration(FeatureName, FeatureProps, IsEnabled) ->
-    TablesAndOwners = [{?RH_TABLE, ?MODULE, #{}}],
-    rabbit_core_ff:mds_migration(FeatureName, FeatureProps, TablesAndOwners, IsEnabled).
+mds_migration_enable(#{feature_name := FeatureName}) ->
+    TablesAndOwners = [{?RH_TABLE, ?MODULE}],
+    rabbit_core_ff:mds_migration_enable(FeatureName, TablesAndOwners).
 
-clear_data_in_khepri(?RH_TABLE, _ExtraArgs) ->
+mds_migration_post_enable(#{feature_name := FeatureName}) ->
+    TablesAndOwners = [{?RH_TABLE, ?MODULE}],
+    rabbit_core_ff:mds_migration_post_enable(FeatureName, TablesAndOwners).
+
+clear_data_in_khepri(?RH_TABLE) ->
     case rabbit_khepri:delete(khepri_recent_history_path()) of
         {ok, _} ->
             ok;
@@ -151,21 +157,21 @@ clear_data_in_khepri(?RH_TABLE, _ExtraArgs) ->
             throw(Error)
     end.
 
-mnesia_write_to_khepri(?RH_TABLE, #cached{key = Key, content = Content}, _ExtraArgs) ->
+mnesia_write_to_khepri(?RH_TABLE, #cached{key = Key, content = Content}) ->
     case rabbit_khepri:create(khepri_recent_history_path(Key), Content) of
         {ok, _} -> ok;
         {error, {mismatching_node, _}} -> ok;
         Error -> throw(Error)
     end.
 
-mnesia_delete_to_khepri(?RH_TABLE, #cached{key = Key}, _ExtraArgs) ->
+mnesia_delete_to_khepri(?RH_TABLE, #cached{key = Key}) ->
     case rabbit_khepri:delete(khepri_recent_history_path(Key)) of
         {ok, _} ->
             ok;
         Error ->
             throw(Error)
     end;
-mnesia_delete_to_khepri(?RH_TABLE, Key, _ExtraArgs) ->
+mnesia_delete_to_khepri(?RH_TABLE, Key) ->
     case rabbit_khepri:delete(khepri_recent_history_path(Key)) of
         {ok, _} ->
             ok;

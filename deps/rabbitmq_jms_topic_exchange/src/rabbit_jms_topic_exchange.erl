@@ -34,10 +34,11 @@
 
 -export([info/1, info/2]).
 
--export([mds_migration/3,
-         mnesia_write_to_khepri/3,
-         mnesia_delete_to_khepri/3,
-         clear_data_in_khepri/2]).
+-export([mds_migration_enable/1,
+         mds_migration_post_enable/1,
+         mnesia_write_to_khepri/2,
+         mnesia_delete_to_khepri/2,
+         clear_data_in_khepri/1]).
 
 %%----------------------------------------------------------------------------
 
@@ -62,7 +63,8 @@
       doc_url       => "", %% TODO
       stability     => experimental,
       depends_on    => [raft_based_metadata_store_phase1],
-      migration_fun => {?MODULE, mds_migration}
+      callbacks     => #{enable => {?MODULE, mds_migration_enable},
+                         post_enable => {?MODULE, mds_migration_post_enable}}
      }}).
 %%----------------------------------------------------------------------------
 
@@ -184,11 +186,15 @@ info(_X) -> [].
 info(_X, _) -> [].
 
 
-mds_migration(FeatureName, FeatureProps, IsEnabled) ->
-    TablesAndOwners = [{?JMS_TOPIC_TABLE, ?MODULE, #{}}],
-    rabbit_core_ff:mds_migration(FeatureName, FeatureProps, TablesAndOwners, IsEnabled).
+mds_migration_enable(#{feature_name := FeatureName}) ->
+    TablesAndOwners = [{?JMS_TOPIC_TABLE, ?MODULE}],
+    rabbit_core_ff:mds_migration_enable(FeatureName, TablesAndOwners).
 
-clear_data_in_khepri(?JMS_TOPIC_TABLE, _ExtraArgs) ->
+mds_migration_post_enable(#{feature_name := FeatureName}) ->
+    TablesAndOwners = [{?JMS_TOPIC_TABLE, ?MODULE}],
+    rabbit_core_ff:mds_migration_post_enable(FeatureName, TablesAndOwners).
+
+clear_data_in_khepri(?JMS_TOPIC_TABLE) ->
     case rabbit_khepri:delete(khepri_jms_topic_exchange_path()) of
         {ok, _} ->
             ok;
@@ -196,22 +202,21 @@ clear_data_in_khepri(?JMS_TOPIC_TABLE, _ExtraArgs) ->
             throw(Error)
     end.
 
-mnesia_write_to_khepri(?JMS_TOPIC_TABLE, #?JMS_TOPIC_RECORD{x_name = XName, x_selector_funs = BFuns},
-                       _ExtraArgs) ->
+mnesia_write_to_khepri(?JMS_TOPIC_TABLE, #?JMS_TOPIC_RECORD{x_name = XName, x_selector_funs = BFuns}) ->
     case rabbit_khepri:create(khepri_jms_topic_exchange_path(XName), BFuns) of
         {ok, _} -> ok;
         {error, {mismatching_node, _}} -> ok;
         Error -> throw(Error)
     end.
 
-mnesia_delete_to_khepri(?JMS_TOPIC_TABLE, #?JMS_TOPIC_RECORD{x_name = XName}, _ExtraArgs) ->
+mnesia_delete_to_khepri(?JMS_TOPIC_TABLE, #?JMS_TOPIC_RECORD{x_name = XName}) ->
     case rabbit_khepri:delete(khepri_jms_topic_exchange_path(XName)) of
         {ok, _} ->
             ok;
         Error ->
             throw(Error)
     end;
-mnesia_delete_to_khepri(?JMS_TOPIC_TABLE, Key, _ExtraArgs) ->
+mnesia_delete_to_khepri(?JMS_TOPIC_TABLE, Key) ->
     case rabbit_khepri:delete(khepri_jms_topic_exchange_path(Key)) of
         {ok, _} ->
             ok;

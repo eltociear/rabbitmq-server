@@ -54,9 +54,9 @@
 
 -export([list_in_khepri_tx/2]).
 
--export([clear_data_in_khepri/2,
-         mnesia_write_to_khepri/3,
-         mnesia_delete_to_khepri/3]).
+-export([clear_data_in_khepri/1,
+         mnesia_write_to_khepri/2,
+         mnesia_delete_to_khepri/2]).
 
 %%----------------------------------------------------------------------------
 
@@ -593,14 +593,14 @@ khepri_global_rp_path(Key) ->
 khepri_vhost_rp_path(VHost, Component, Name) ->
     [?MODULE, per_vhost, VHost, Component, Name].
 
-clear_data_in_khepri(rabbit_runtime_parameters, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_runtime_parameters) ->
     Path = khepri_rp_path(),
     case rabbit_khepri:delete(Path) of
         {ok, _} -> ok;
         Error -> throw(Error)
     end.
 
-mnesia_write_to_khepri(rabbit_runtime_parameters, RuntimeParams, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_runtime_parameters, RuntimeParams) ->
     rabbit_khepri:transaction(
       fun() ->
               lists:foreach(fun(#runtime_parameters{key = {VHost, Comp, Name}} = RuntimeParam) ->
@@ -619,14 +619,14 @@ mnesia_write_to_khepri(rabbit_runtime_parameters, RuntimeParams, _ExtraArgs) ->
       end).
 
 mnesia_delete_to_khepri(rabbit_runtime_parameters,
-  #runtime_parameters{key = {VHost, Comp, Name}}, _ExtraArgs) ->
+  #runtime_parameters{key = {VHost, Comp, Name}}) ->
     Path = khepri_vhost_rp_path(VHost, Comp, Name),
     case rabbit_khepri:delete(Path) of
         {ok, _} -> ok;
         Error -> throw(Error)
     end;
 mnesia_delete_to_khepri(rabbit_runtime_parameters,
-  #runtime_parameters{key = Key}, _ExtraArgs) ->
+  #runtime_parameters{key = Key}) ->
     Path = khepri_global_rp_path(Key),
     case rabbit_khepri:delete(Path) of
         {ok, _} -> ok;

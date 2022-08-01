@@ -29,17 +29,9 @@ all() ->
 
 groups() ->
     [
-     {mnesia_store, [], [{parallel_tests, [parallel], [
-                                                       test_topic_selection
-                                                      ]}
-                        ]},
-     {khepri_store, [], [{parallel_tests, [parallel], [
-                                                       test_topic_selection
-                                                      ]}
-                        ]},
-     {khepri_migration, [], [
-                             from_mnesia_to_khepri
-                            ]}
+     {mnesia_store, [], [test_topic_selection]},
+     {khepri_store, [], [test_topic_selection]},
+     {khepri_migration, [], [from_mnesia_to_khepri]}
     ].
 
 %% -------------------------------------------------------------------
@@ -53,22 +45,22 @@ init_per_suite(Config) ->
 end_per_suite(Config) ->
     rabbit_ct_helpers:run_teardown_steps(Config).
 
-init_per_group(mnesia_store, Config) ->
-    rabbit_ct_helpers:set_config(Config, [{metadata_store, mnesia}]);
-init_per_group(khepri_store, Config) ->
-    rabbit_ct_helpers:set_config(Config, [{metadata_store, khepri}]);
-init_per_group(_, Config) ->
-    Config1 = rabbit_ct_helpers:set_config(Config, [
-        {rmq_nodename_suffix, ?MODULE}
-      ]),
-    rabbit_ct_helpers:run_setup_steps(Config1,
-      rabbit_ct_broker_helpers:setup_steps() ++
-      rabbit_ct_client_helpers:setup_steps()).
+init_per_group(mnesia_store = Group, Config) ->
+    init_per_group_common(Group, Config);
+init_per_group(khepri_store = Group, Config0) ->
+    Config = rabbit_ct_helpers:set_config(Config0, [{metadata_store, khepri}]),
+    init_per_group_common(Group, Config);
+init_per_group(khepri_migration = Group, Config) ->
+    init_per_group_common(Group, Config).
 
-end_per_group(mnesia_store, Config) ->
-    Config;
-end_per_group(khepri_store, Config) ->
-    Config;
+init_per_group_common(Group, Config) ->
+    Config1 = rabbit_ct_helpers:set_config(Config, [
+                                                    {rmq_nodename_suffix, Group}
+                                                   ]),
+    rabbit_ct_helpers:run_setup_steps(Config1,
+                                      rabbit_ct_broker_helpers:setup_steps() ++
+                                          rabbit_ct_client_helpers:setup_steps()).
+
 end_per_group(_, Config) ->
     rabbit_ct_helpers:run_teardown_steps(Config,
                                          rabbit_ct_client_helpers:teardown_steps() ++

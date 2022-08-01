@@ -21,10 +21,11 @@
 -export([info/1, info/2]).
 -export([ring_state/2]).
 
--export([mds_migration/3,
-         mnesia_write_to_khepri/3,
-         mnesia_delete_to_khepri/3,
-         clear_data_in_khepri/2]).
+-export([mds_migration_enable/1,
+         mds_migration_post_enable/1,
+         mnesia_write_to_khepri/2,
+         mnesia_delete_to_khepri/2,
+         clear_data_in_khepri/1]).
 
 -rabbit_boot_step(
    {rabbit_exchange_type_consistent_hash_registry,
@@ -49,7 +50,8 @@
       doc_url       => "", %% TODO
       stability     => experimental,
       depends_on    => [raft_based_metadata_store_phase1],
-      migration_fun => {?MODULE, mds_migration}
+      callbacks     => #{enable => {?MODULE, mds_migration_enable},
+                         post_enable => {?MODULE, mds_migration_post_enable}}
      }}).
 
 %% This data model allows for efficient routing and exchange deletion
@@ -465,11 +467,15 @@ ring_state(VirtualHost, Exchange) ->
 assert_args_equivalence(X, Args) ->
     rabbit_exchange:assert_args_equivalence(X, Args).
 
-mds_migration(FeatureName, FeatureProps, IsEnabled) ->
-    TablesAndOwners = [{?HASH_RING_STATE_TABLE, ?MODULE, #{}}],
-    rabbit_core_ff:mds_migration(FeatureName, FeatureProps, TablesAndOwners, IsEnabled).
+mds_migration_enable(#{feature_name := FeatureName}) ->
+    TablesAndOwners = [{?HASH_RING_STATE_TABLE, ?MODULE}],
+    rabbit_core_ff:mds_migration_enable(FeatureName, TablesAndOwners).
 
-clear_data_in_khepri(?HASH_RING_STATE_TABLE, _ExtraArgs) ->
+mds_migration_post_enable(#{feature_name := FeatureName}) ->
+    TablesAndOwners = [{?HASH_RING_STATE_TABLE, ?MODULE}],
+    rabbit_core_ff:mds_migration_post_enable(FeatureName, TablesAndOwners).
+
+clear_data_in_khepri(?HASH_RING_STATE_TABLE) ->
     case rabbit_khepri:delete(khepri_consistent_hash_path()) of
         {ok, _} ->
             ok;
@@ -477,22 +483,21 @@ clear_data_in_khepri(?HASH_RING_STATE_TABLE, _ExtraArgs) ->
             throw(Error)
     end.
 
-mnesia_write_to_khepri(?HASH_RING_STATE_TABLE, #chx_hash_ring{exchange = XName} = Record,
-                       _ExtraArgs) ->
+mnesia_write_to_khepri(?HASH_RING_STATE_TABLE, #chx_hash_ring{exchange = XName} = Record) ->
     case rabbit_khepri:create(khepri_consistent_hash_path(XName), Record) of
         {ok, _} -> ok;
         {error, {mismatching_node, _}} -> ok;
         Error -> throw(Error)
     end.
 
-mnesia_delete_to_khepri(?HASH_RING_STATE_TABLE, #chx_hash_ring{exchange = XName}, _ExtraArgs) ->
+mnesia_delete_to_khepri(?HASH_RING_STATE_TABLE, #chx_hash_ring{exchange = XName}) ->
     case rabbit_khepri:delete(khepri_consistent_hash_path(XName)) of
         {ok, _} ->
             ok;
         Error ->
             throw(Error)
     end;
-mnesia_delete_to_khepri(?HASH_RING_STATE_TABLE, Key, _ExtraArgs) ->
+mnesia_delete_to_khepri(?HASH_RING_STATE_TABLE, Key) ->
     case rabbit_khepri:delete(khepri_consistent_hash_path(Key)) of
         {ok, _} ->
             ok;

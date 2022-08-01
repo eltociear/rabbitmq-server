@@ -57,9 +57,9 @@
          list_vhost_topic_permissions_in_khepri_tx_fun/1]).
 
 -export([state_can_expire/0]).
--export([clear_data_in_khepri/2,
-         mnesia_write_to_khepri/3,
-         mnesia_delete_to_khepri/3]).
+-export([clear_data_in_khepri/1,
+         mnesia_write_to_khepri/2,
+         mnesia_delete_to_khepri/2]).
 -export([khepri_users_path/0,
          khepri_user_path/1]).
 
@@ -1657,16 +1657,16 @@ notify_limit_clear(Username, ActingUser) ->
         [{name, <<"limits">>}, {user_who_performed_action, ActingUser},
         {username, Username}]).
 
-clear_data_in_khepri(rabbit_user, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_user) ->
     Path = khepri_users_path(),
     case rabbit_khepri:delete(Path) of
         {ok, _} -> ok;
         Error -> throw(Error)
     end;
-clear_data_in_khepri(_, _ExtraArgs) ->
+clear_data_in_khepri(_) ->
     ok.
 
-mnesia_write_to_khepri(rabbit_user, Users, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_user, Users) ->
     rabbit_khepri:transaction(
       fun() ->
               [begin
@@ -1678,7 +1678,7 @@ mnesia_write_to_khepri(rabbit_user, Users, _ExtraArgs) ->
                    end
                end || User <- Users, ?is_internal_user(User)]
       end, rw);
-mnesia_write_to_khepri(rabbit_user_permission, UserPermissions, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_user_permission, UserPermissions) ->
     rabbit_khepri:transaction(
       fun() ->
               [begin
@@ -1699,7 +1699,7 @@ mnesia_write_to_khepri(rabbit_user_permission, UserPermissions, _ExtraArgs) ->
                                          username = Username,
                                          virtual_host = VHost}} = UserPermission <- UserPermissions]
       end, rw);
-mnesia_write_to_khepri(rabbit_topic_permission, TopicPermissions, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_topic_permission, TopicPermissions) ->
     rabbit_khepri:transaction(
       fun() ->
               [begin
@@ -1725,7 +1725,7 @@ mnesia_write_to_khepri(rabbit_topic_permission, TopicPermissions, _ExtraArgs) ->
                                 exchange = Exchange}} = TopicPermission <- TopicPermissions]
       end, rw).
 
-mnesia_delete_to_khepri(rabbit_user, Record, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_user, Record) ->
     %% The record and the Mnesia table have different names.
     User = erlang:setelement(1, Record, internal_user),
     true = ?is_internal_user(User),
@@ -1739,8 +1739,7 @@ mnesia_delete_to_khepri(rabbit_user_permission,
                         #user_permission{
                            user_vhost = #user_vhost{
                                            username = Username,
-                                           virtual_host = VHost}},
-                        _ExtraArgs) ->
+                                           virtual_host = VHost}}) ->
     Path = khepri_user_permission_path(Username, VHost),
     case rabbit_khepri:delete(Path) of
         {ok, _} -> ok;
@@ -1753,8 +1752,7 @@ mnesia_delete_to_khepri(rabbit_topic_permission,
                                   user_vhost = #user_vhost{
                                                   username = Username,
                                                   virtual_host = VHost},
-                                  exchange = Exchange}},
-                        _ExtraArgs) ->
+                                  exchange = Exchange}}) ->
     Path = khepri_topic_permission_path(Username, VHost, Exchange),
     case rabbit_khepri:delete(Path) of
         {ok, _} -> ok;

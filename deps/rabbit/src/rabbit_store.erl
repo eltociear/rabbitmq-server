@@ -58,9 +58,9 @@
 -export([list_exchanges_in_khepri_tx/1,
          lookup_queue_in_khepri_tx/1]).
 
--export([mnesia_write_to_khepri/3,
-         mnesia_delete_to_khepri/3,
-         clear_data_in_khepri/2]).
+-export([mnesia_write_to_khepri/2,
+         mnesia_delete_to_khepri/2,
+         clear_data_in_khepri/1]).
 
 -export([init/0, sync/0]).
 
@@ -1033,7 +1033,7 @@ delete_topic_trie_bindings(Bs) ->
 %% Feature flags
 %% --------------------------------------------------------------
 
-mnesia_write_to_khepri(rabbit_queue, Qs, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_queue, Qs) ->
     rabbit_khepri:transaction(
       fun() ->
               [begin
@@ -1044,7 +1044,7 @@ mnesia_write_to_khepri(rabbit_queue, Qs, _ExtraArgs) ->
                    end
                end || Q <- Qs]
       end, rw);
-mnesia_write_to_khepri(rabbit_durable_queue, _Qs, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_durable_queue, _Qs) ->
     %% All durable queues are on the `rabbit_queue` table too
     ok;
 %% Mnesia contains two tables if an exchange has been recovered:
@@ -1054,15 +1054,15 @@ mnesia_write_to_khepri(rabbit_durable_queue, _Qs, _ExtraArgs) ->
 %% How do we then transform data from mnesia to khepri when
 %% the feature flag is enabled?
 %% Let's create the Khepri entry from the ram table.
-mnesia_write_to_khepri(rabbit_exchange, Exchanges, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_exchange, Exchanges) ->
     rabbit_khepri:transaction(
       fun() ->
               [khepri_create_tx(khepri_exchange_path(Exchange#exchange.name), Exchange)
                || Exchange <- Exchanges]
       end, rw);                       
-mnesia_write_to_khepri(rabbit_durable_exchange, _Exchange0, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_durable_exchange, _Exchange0) ->
     ok;
-mnesia_write_to_khepri(rabbit_exchange_serial, Exchanges, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_exchange_serial, Exchanges) ->
     rabbit_khepri:transaction(
       fun() ->
               [begin
@@ -1076,7 +1076,7 @@ mnesia_write_to_khepri(rabbit_exchange_serial, Exchanges, _ExtraArgs) ->
                    end
                end || Exchange <- Exchanges]
       end, rw);
-mnesia_write_to_khepri(rabbit_route, Routes, _ExtraArgs)->
+mnesia_write_to_khepri(rabbit_route, Routes)->
     rabbit_khepri:transaction(
       fun() ->
               [begin
@@ -1085,15 +1085,13 @@ mnesia_write_to_khepri(rabbit_route, Routes, _ExtraArgs)->
                    add_binding_tx(Path, Binding)
                end || Route <- Routes]
       end, rw);
-mnesia_write_to_khepri(rabbit_durable_route, _, _ExtraArgs)->
+mnesia_write_to_khepri(rabbit_durable_route, _)->
     ok;
-mnesia_write_to_khepri(rabbit_semi_durable_route, _, _ExtraArgs)->
+mnesia_write_to_khepri(rabbit_semi_durable_route, _)->
     ok;
-mnesia_write_to_khepri(rabbit_reverse_route, _, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_reverse_route, _) ->
     ok;
-mnesia_write_to_khepri(rabbit_topic_trie_binding,
-                       TrieBindings,
-                       _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_topic_trie_binding, TrieBindings) ->
     %% There isn't enough information to rebuild the tree as the routing key is split
     %% along the trie tree on mnesia. But, we can query the bindings table (migrated
     %% previosly) and migrate the entries that match this <X, D> combo
@@ -1113,87 +1111,87 @@ mnesia_write_to_khepri(rabbit_topic_trie_binding,
                                                                          args = Args} <- Bindings]
                end || TrieBinding <- TrieBindings]
       end);
-mnesia_write_to_khepri(rabbit_topic_trie_node, _, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_topic_trie_node, _) ->
     %% Nothing to do, the `rabbit_topic_trie_binding` is enough to perform the migration
     %% as Khepri stores each topic binding as a single path
     ok;
-mnesia_write_to_khepri(rabbit_topic_trie_edge, _, _ExtraArgs) ->
+mnesia_write_to_khepri(rabbit_topic_trie_edge, _) ->
     %% Nothing to do, the `rabbit_topic_trie_binding` is enough to perform the migration
     %% as Khepri stores each topic binding as a single path
     ok.
 
-mnesia_delete_to_khepri(rabbit_queue, Q, _ExtraArgs) when ?is_amqqueue(Q) ->
+mnesia_delete_to_khepri(rabbit_queue, Q) when ?is_amqqueue(Q) ->
     khepri_delete(khepri_queue_path(amqqueue:get_name(Q)));
-mnesia_delete_to_khepri(rabbit_queue, Name, _ExtraArgs) when is_record(Name, resource) ->
+mnesia_delete_to_khepri(rabbit_queue, Name) when is_record(Name, resource) ->
     khepri_delete(khepri_queue_path(Name));
-mnesia_delete_to_khepri(rabbit_durable_queue, Q, _ExtraArgs) when ?is_amqqueue(Q) ->
+mnesia_delete_to_khepri(rabbit_durable_queue, Q) when ?is_amqqueue(Q) ->
     khepri_delete(khepri_queue_path(amqqueue:get_name(Q)));
-mnesia_delete_to_khepri(rabbit_durable_queue, Name, _ExtraArgs) when is_record(Name, resource) ->
+mnesia_delete_to_khepri(rabbit_durable_queue, Name) when is_record(Name, resource) ->
     khepri_delete(khepri_queue_path(Name));
-mnesia_delete_to_khepri(rabbit_exchange, Exchange, _ExtraArgs) when is_record(Exchange, exchange) ->
+mnesia_delete_to_khepri(rabbit_exchange, Exchange) when is_record(Exchange, exchange) ->
     khepri_delete(khepri_exchange_path(Exchange#exchange.name));
-mnesia_delete_to_khepri(rabbit_exchange, Name, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_exchange, Name) ->
     khepri_delete(khepri_exchange_path(Name));
-mnesia_delete_to_khepri(rabbit_durable_exchange, Exchange, _ExtraArgs)
+mnesia_delete_to_khepri(rabbit_durable_exchange, Exchange)
   when is_record(Exchange, exchange) ->
     khepri_delete(khepri_exchange_path(Exchange#exchange.name));
-mnesia_delete_to_khepri(rabbit_durable_exchange, Name, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_durable_exchange, Name) ->
     khepri_delete(khepri_exchange_path(Name));
-mnesia_delete_to_khepri(rabbit_exchange_serial, ExchangeSerial, _ExtraArgs)
+mnesia_delete_to_khepri(rabbit_exchange_serial, ExchangeSerial)
   when is_record(ExchangeSerial, exchange_serial) ->
     khepri_delete(khepri_exchange_serial_path(ExchangeSerial#exchange_serial.name));
-mnesia_delete_to_khepri(rabbit_exchange_serial, Name, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_exchange_serial, Name) ->
     khepri_delete(khepri_exchange_serial_path(Name));
-mnesia_delete_to_khepri(rabbit_route, Route, _ExtraArgs) when is_record(Route, route) ->
+mnesia_delete_to_khepri(rabbit_route, Route) when is_record(Route, route) ->
     khepri_delete(khepri_route_path(Route#route.binding));
-mnesia_delete_to_khepri(rabbit_route, Name, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_route, Name) ->
     khepri_delete(khepri_route_path(Name));
-mnesia_delete_to_khepri(rabbit_durable_route, Route, _ExtraArgs) when is_record(Route, route) ->
+mnesia_delete_to_khepri(rabbit_durable_route, Route) when is_record(Route, route) ->
     khepri_delete(khepri_route_path(Route#route.binding));
-mnesia_delete_to_khepri(rabbit_durable_route, Name, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_durable_route, Name) ->
     khepri_delete(khepri_route_path(Name));
-mnesia_delete_to_khepri(rabbit_semi_durable_route, Route, _ExtraArgs) when is_record(Route, route) ->
+mnesia_delete_to_khepri(rabbit_semi_durable_route, Route) when is_record(Route, route) ->
     khepri_delete(khepri_route_path(Route#route.binding));
-mnesia_delete_to_khepri(rabbit_semi_durable_route, Name, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_semi_durable_route, Name) ->
     khepri_delete(khepri_route_path(Name));
-mnesia_delete_to_khepri(rabbit_topic_trie_binding, #topic_trie_binding{}, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_topic_trie_binding, #topic_trie_binding{}) ->
     %% TODO No routing keys here, how do we do? Use the node_id to search on the tree?
     %% Can we still query mnesia content?
     ok;
-mnesia_delete_to_khepri(rabbit_topic_trie_node, #topic_trie_node{}, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_topic_trie_node, #topic_trie_node{}) ->
     %% TODO see above
     ok;
-mnesia_delete_to_khepri(rabbit_topic_trie_edge, #topic_trie_edge{}, _ExtraArgs) ->
+mnesia_delete_to_khepri(rabbit_topic_trie_edge, #topic_trie_edge{}) ->
     %% TODO see above
     ok.
 
-clear_data_in_khepri(rabbit_queue, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_queue) ->
     khepri_delete(khepri_queues_path());
-clear_data_in_khepri(rabbit_durable_queue, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_durable_queue) ->
     khepri_delete(khepri_queues_path());
-clear_data_in_khepri(rabbit_exchange, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_exchange) ->
     khepri_delete(khepri_exchanges_path());
 %% There is a single khepri entry for exchanges and it should be already deleted
-clear_data_in_khepri(rabbit_durable_exchange, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_durable_exchange) ->
     ok;
-clear_data_in_khepri(rabbit_exchange_serial, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_exchange_serial) ->
     khepri_delete(khepri_exchange_serials_path());
-clear_data_in_khepri(rabbit_route, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_route) ->
     khepri_delete(khepri_routes_path()),
     khepri_delete(khepri_routing_path());
 %% There is a single khepri entry for routes and it should be already deleted
-clear_data_in_khepri(rabbit_durable_route, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_durable_route) ->
     ok;
-clear_data_in_khepri(rabbit_semi_durable_route, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_semi_durable_route) ->
     ok;
-clear_data_in_khepri(rabbit_reverse_route, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_reverse_route) ->
     ok;
-clear_data_in_khepri(rabbit_topic_trie_binding, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_topic_trie_binding) ->
     khepri_delete(khepri_exchange_type_topic_path());
 %% There is a single khepri entry for topics and it should be already deleted
-clear_data_in_khepri(rabbit_topic_trie_node, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_topic_trie_node) ->
     ok;
-clear_data_in_khepri(rabbit_topic_trie_edge, _ExtraArgs) ->
+clear_data_in_khepri(rabbit_topic_trie_edge) ->
     ok.
 
 %% Internal

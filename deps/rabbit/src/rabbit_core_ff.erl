@@ -263,24 +263,24 @@ delete_table(FeatureName, Tab) ->
 %% both vhosts and users to exist in the metadata store.
 
 %% TODO should they be integrated on phase1?
--define(MDS_PHASE2_TABLES, [{rabbit_queue, rabbit_store, #{}},
-                            {rabbit_durable_queue, rabbit_store, #{}},
-                            {rabbit_exchange, rabbit_store, #{}},
-                            {rabbit_durable_exchange, rabbit_store, #{}},
-                            {rabbit_exchange_serial, rabbit_store, #{}},
-                            {rabbit_route, rabbit_store, #{}},
-                            {rabbit_durable_route, rabbit_store, #{}},
-                            {rabbit_semi_durable_route, rabbit_store, #{}},
-                            {rabbit_reverse_route, rabbit_store, #{}},
-                            {rabbit_topic_trie_binding, rabbit_store, #{}},
-                            {rabbit_topic_trie_node, rabbit_store, #{}},
-                            {rabbit_topic_trie_edge, rabbit_store, #{}}]).
+-define(MDS_PHASE2_TABLES, [{rabbit_queue, rabbit_store},
+                            {rabbit_durable_queue, rabbit_store},
+                            {rabbit_exchange, rabbit_store},
+                            {rabbit_durable_exchange, rabbit_store},
+                            {rabbit_exchange_serial, rabbit_store},
+                            {rabbit_route, rabbit_store},
+                            {rabbit_durable_route, rabbit_store},
+                            {rabbit_semi_durable_route, rabbit_store},
+                            {rabbit_reverse_route, rabbit_store},
+                            {rabbit_topic_trie_binding, rabbit_store},
+                            {rabbit_topic_trie_node, rabbit_store},
+                            {rabbit_topic_trie_edge, rabbit_store}]).
 
--define(MDS_PHASE1_TABLES, [{rabbit_vhost, rabbit_vhost, #{}},
-                            {rabbit_user, rabbit_auth_backend_internal, #{}},
-                            {rabbit_user_permission, rabbit_auth_backend_internal, #{}},
-                            {rabbit_topic_permission, rabbit_auth_backend_internal, #{}},
-                            {rabbit_runtime_parameters, rabbit_runtime_parameters, #{}}]
+-define(MDS_PHASE1_TABLES, [{rabbit_vhost, rabbit_vhost},
+                            {rabbit_user, rabbit_auth_backend_internal},
+                            {rabbit_user_permission, rabbit_auth_backend_internal},
+                            {rabbit_topic_permission, rabbit_auth_backend_internal},
+                            {rabbit_runtime_parameters, rabbit_runtime_parameters}]
         ++ ?MDS_PHASE2_TABLES).
 
 mds_phase1_migration_enable(#{feature_name := FeatureName}) ->
@@ -308,7 +308,7 @@ mds_migration_enable(FeatureName, TablesAndOwners) ->
 
 mds_migration_post_enable(FeatureName, TablesAndOwners) ->
     ?assert(rabbit_khepri:is_enabled(non_blocking)),
-    {Tables, _, _} = lists:unzip3(TablesAndOwners),
+    {Tables, _} = lists:unzip(TablesAndOwners),
     empty_unused_mnesia_tables(FeatureName, Tables).
 
 ensure_khepri_cluster_matches_mnesia(FeatureName) ->
@@ -461,7 +461,7 @@ khepri_cluster_on_node(Node) ->
       rabbit_misc:rpc_call(Node, rabbit_khepri, nodes_if_khepri_enabled, [])).
 
 migrate_tables_to_khepri(FeatureName, TablesAndOwners) ->
-    {Tables, _, _} = lists:unzip3(TablesAndOwners),
+    {Tables, _} = lists:unzip(TablesAndOwners),
     rabbit_table:wait(Tables, _Retry = true),
     ?LOG_NOTICE(
        "Feature flag `~s`:   starting migration from Mnesia "
@@ -498,7 +498,7 @@ migrate_tables_to_khepri_run(FeatureName, TablesAndOwners) ->
        [FeatureName]),
     ok = clear_data_from_previous_attempt(FeatureName, lists:reverse(TablesAndOwners)),
 
-    {Tables, _, _} = lists:unzip3(TablesAndOwners),
+    {Tables, _} = lists:unzip(TablesAndOwners),
     %% Subscribe to Mnesia events: we want to know about all writes and
     %% deletions happening in parallel to the copy we are about to start.
     ?LOG_DEBUG(
@@ -527,8 +527,8 @@ migrate_tables_to_khepri_run(FeatureName, TablesAndOwners) ->
     ok = unsubscribe_to_mnesia_changes(FeatureName, Tables).
 
 clear_data_from_previous_attempt(
-  FeatureName, [{Table, Mod, ExtraArgs} | Rest]) ->
-    ok = Mod:clear_data_in_khepri(Table, ExtraArgs),
+  FeatureName, [{Table, Mod} | Rest]) ->
+    ok = Mod:clear_data_in_khepri(Table),
     clear_data_from_previous_attempt(FeatureName, Rest);
 clear_data_from_previous_attempt(_, []) ->
     ok.
@@ -558,9 +558,9 @@ unsubscribe_to_mnesia_changes(_, []) ->
     ok.
 
 copy_from_mnesia_to_khepri(
-  FeatureName, [{Table, Mod, ExtraArgs} | Rest]) ->
+  FeatureName, [{Table, Mod} | Rest]) ->
     Fun = fun(Entries) ->
-                  Mod:mnesia_write_to_khepri(Table, Entries, ExtraArgs)
+                  Mod:mnesia_write_to_khepri(Table, Entries)
           end,
     do_copy_from_mnesia_to_khepri(FeatureName, Table, Fun),
     copy_from_mnesia_to_khepri(FeatureName, Rest);
@@ -608,7 +608,7 @@ final_sync_from_mnesia_to_khepri(FeatureName, TablesAndOwners) ->
     %% Switch all tables to read-only. All concurrent and future Mnesia
     %% transaction involving a write to one of them will fail with the
     %% `{no_exists, Table}` exception.
-    {Tables, _, _} = lists:unzip3(TablesAndOwners),
+    {Tables, _} = lists:unzip(TablesAndOwners),
     lists:foreach(
       fun(Table) ->
               ?LOG_DEBUG(
@@ -669,14 +669,14 @@ consume_mnesia_events(FeatureName, TablesAndOwners, Count, Handled) ->
 %% TODO handle mnesia_runtime_parameters, rabbit_amqqueue, rabbit_exchange, rabbit_binding,
 %% rabbit_exchange_type_topic
 handle_mnesia_write(Table, NewRecord, TablesAndOwners) ->
-    {Mod, _, ExtraArgs} = lists:keyfind(Table, 1, TablesAndOwners),
-    Mod:mnesia_write_to_khepri(Table, NewRecord, ExtraArgs).
+    {Mod, _} = lists:keyfind(Table, 1, TablesAndOwners),
+    Mod:mnesia_write_to_khepri(Table, NewRecord).
 
 %% TODO handle mnesia_runtime_parameters, rabbit_amqqueue, rabbit_exchange, rabbit_binding,
 %% rabbit_exchange_type_topic
 handle_mnesia_delete(Table, Key, TablesAndOwners) ->
-    {Mod, _, ExtraArgs} = lists:keyfind(Table, 1, TablesAndOwners),
-    Mod:mnesia_delete_to_khepri(Table, Key, ExtraArgs).
+    {Mod, _} = lists:keyfind(Table, 1, TablesAndOwners),
+    Mod:mnesia_delete_to_khepri(Table, Key).
 
 %% We can't remove unused tables at this point yet. The reason is that tables
 %% are synchronized before feature flags in `rabbit_mnesia`. So if a node is
