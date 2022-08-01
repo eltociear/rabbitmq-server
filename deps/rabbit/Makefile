@@ -149,7 +149,7 @@ dep_syslog = git https://github.com/schlagert/syslog 4.0.0
 dep_osiris = git https://github.com/rabbitmq/osiris main
 dep_systemd = hex 0.6.1
 dep_seshat = hex 0.3.2
-dep_khepri = git https://github.com/rabbitmq/khepri.git c41d3399fa2266c95a4ad00605a47aebebb52059
+dep_khepri = git https://github.com/rabbitmq/khepri.git cd2d894e8660e13e72a32030ce798dc1fb7ab599
 
 define usage_xml_to_erl
 $(subst __,_,$(patsubst $(DOCS_DIR)/rabbitmq%.1.xml, src/rabbit_%_usage.erl, $(subst -,_,$(1))))
