@@ -124,7 +124,9 @@
       depends_on    => [feature_flags_v2,
                         maintenance_mode_status,
                         user_limits,
-                        virtual_host_metadata],
+                        virtual_host_metadata,
+                        tracking_records_in_ets,
+                        listener_records_in_ets],
       callbacks     => #{enable =>
                              {?MODULE, mds_phase1_migration_enable},
                          post_enable =>
