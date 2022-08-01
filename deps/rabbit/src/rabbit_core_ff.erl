@@ -574,7 +574,7 @@ do_copy_from_mnesia_to_khepri(FeatureName, Table, Fun) ->
     ?LOG_DEBUG(
        "Feature flag `~s`:     table ~s: about ~b record(s) to copy",
        [FeatureName, Table, Count]),
-    {ok, Batch} = application:get_env(rabbit, khepri_migration_batch),
+    {ok, Batch} = application:get_env(rabbit, khepri_migration_batch, 1000),
     Cont = mnesia:async_dirty(
              fun () ->
                      mnesia:select(Table, [{'$1',[],['$1']}], Batch, read) end),
