@@ -54,6 +54,9 @@
          is_enabled/1,
          nodes_if_khepri_enabled/0,
          try_mnesia_or_khepri/2]).
+%% Flag used during migration
+-export([is_ready/0,
+         set_ready/0]).
 -export([do_join/1]).
 
 -ifdef(TEST).
@@ -435,6 +438,18 @@ nodes_if_khepri_enabled() ->
         true  -> nodes();
         false -> []
     end.
+
+is_ready() ->
+    case get([?MODULE, migration, ready]) of
+        {ok, #{data := true}} ->
+            true;
+        _ ->
+            false
+    end.
+
+set_ready() ->
+    khepri:put(
+      ?STORE_ID, [?MODULE, migration, ready], true).
 
 -ifdef(TEST).
 -define(FORCED_MDS_KEY, {?MODULE, forced_metadata_store}).

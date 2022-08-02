@@ -289,7 +289,13 @@ mds_phase1_migration_enable(#{feature_name := FeatureName}) ->
     %% Channel and connection tracking are core features with difference:
     %% tables cannot be predeclared as they include the node name
     Tables = ?MDS_PHASE1_TABLES,
-    mds_migration_enable(FeatureName, Tables).
+    global:set_lock({FeatureName, self()}),
+    Ret = case rabbit_khepri:is_ready() of
+              true -> ok;
+              false -> mds_migration_enable(FeatureName, Tables)
+          end,
+    global:del_lock({FeatureName, self()}),
+    Ret.
 
 mds_phase1_migration_post_enable(#{feature_name := FeatureName}) ->
     %% Channel and connection tracking are core features with difference:
@@ -300,10 +306,7 @@ mds_phase1_migration_post_enable(#{feature_name := FeatureName}) ->
 mds_migration_enable(FeatureName, TablesAndOwners) ->
     case ensure_khepri_cluster_matches_mnesia(FeatureName) of
         ok ->
-            case is_mds_migration_done(FeatureName) of
-                false -> migrate_tables_to_khepri(FeatureName, TablesAndOwners);
-                true  -> ok
-            end;
+            migrate_tables_to_khepri(FeatureName, TablesAndOwners);
         Error ->
             Error
     end.
@@ -314,45 +317,28 @@ mds_migration_post_enable(FeatureName, TablesAndOwners) ->
     empty_unused_mnesia_tables(FeatureName, Tables).
 
 ensure_khepri_cluster_matches_mnesia(FeatureName) ->
-    %% Initialize Khepri cluster based on Mnesia running nodes. Verify that
-    %% all Mnesia nodes are running (all == running). It would be more
-    %% difficult to add them later to the node when they start.
+    %% The ff controller has already ensure that all Mnesia nodes are running.
     ?LOG_DEBUG(
        "Feature flag `~s`:   ensure Khepri Ra system is running",
        [FeatureName]),
     ok = rabbit_khepri:setup(),
-    ?LOG_DEBUG(
-       "Feature flag `~s`:   making sure all Mnesia nodes are running",
-       [FeatureName]),
     AllMnesiaNodes = lists:sort(rabbit_mnesia:cluster_nodes(all)),
-    RunningMnesiaNodes = lists:sort(rabbit_mnesia:cluster_nodes(running)),
-    MissingMnesiaNodes = AllMnesiaNodes -- RunningMnesiaNodes,
-    case MissingMnesiaNodes of
-        [] ->
-            %% This is the first time Khepri will be used for real. Therefore
-            %% we need to make sure the Khepri cluster matches the Mnesia
-            %% cluster.
-            ?LOG_DEBUG(
-               "Feature flag `~s`:   updating the Khepri cluster to match "
-               "the Mnesia cluster",
-               [FeatureName]),
-            case expand_khepri_cluster(FeatureName, AllMnesiaNodes) of
-                ok ->
-                    ok;
-                Error ->
-                    ?LOG_ERROR(
-                       "Feature flag `~s`:   failed to migrate from Mnesia "
-                       "to Khepri: failed to create Khepri cluster: ~p",
-                       [FeatureName, Error]),
-                    Error
-            end;
-        _ ->
+    %% This is the first time Khepri will be used for real. Therefore
+    %% we need to make sure the Khepri cluster matches the Mnesia
+    %% cluster.
+    ?LOG_DEBUG(
+       "Feature flag `~s`:   updating the Khepri cluster to match "
+       "the Mnesia cluster",
+       [FeatureName]),
+    case expand_khepri_cluster(FeatureName, AllMnesiaNodes) of
+        ok ->
+            ok;
+        Error ->
             ?LOG_ERROR(
-               "Feature flag `~s`:   failed to migrate from Mnesia to Khepri: "
-               "all Mnesia nodes must run; the following nodes are missing: "
-               "~p",
-               [FeatureName, MissingMnesiaNodes]),
-            {error, all_mnesia_nodes_must_run}
+               "Feature flag `~s`:   failed to migrate from Mnesia "
+               "to Khepri: failed to create Khepri cluster: ~p",
+               [FeatureName, Error]),
+            Error
     end.
 
 expand_khepri_cluster(FeatureName, AllMnesiaNodes) ->
@@ -481,6 +467,7 @@ migrate_tables_to_khepri(FeatureName, TablesAndOwners) ->
                "Feature flag `~s`:   migration from Mnesia to Khepri "
                "finished",
                [FeatureName]),
+            rabbit_khepri:set_ready(),
             ok;
         {'DOWN', MonitorRef, process, Pid, Info} ->
             ?LOG_ERROR(
@@ -730,63 +717,3 @@ empty_unused_mnesia_table(Table, Key) ->
     NextKey = mnesia:dirty_next(Table, Key),
     ok = mnesia:dirty_delete(Table, Key),
     empty_unused_mnesia_table(Table, NextKey).
-
-is_mds_migration_done(FeatureName) ->
-    %% To determine if the migration to Khepri was finished, we look at the
-    %% state of the feature flag on another node, if any.
-    ThisNode = node(),
-    KhepriNodes = rabbit_khepri:nodes(),
-    case KhepriNodes -- [ThisNode] of
-        [] ->
-            %% There are no other nodes. It means the node is unclustered
-            %% and the migration function is called for the first time. This
-            %% function returns `false'.
-            ?LOG_DEBUG(
-               "Feature flag `~s`:   migration done? false, the node is "
-               "unclustered",
-               [FeatureName]),
-            false;
-        [RemoteKhepriNode | _] ->
-            %% This node is clustered already, either because of peer discovery
-            %% or because of the `expand_khepri_cluster()' function.
-            %%
-            %% We need to distinguish two situations:
-            %%
-            %% - The first time the feature flag is enabled in a cluster, we
-            %%   want to migrate records from Mnesia to Khepri. In this case,
-            %%   the state of the feature flag will be `state_changing' on all
-            %%   nodes in the cluster. That's why we can pick any node to query
-            %%   its state.
-            %%
-            %% - When a new node is joining an existing cluster which is
-            %%   already using Khepri, we DO NOT want to migrate anything
-            %%   (Mnesia tables are empty, or about to be if the
-            %%   `post_enabled_locally' code is still running). To determine
-            %%   this, we query a remote node (but not this local node) to see
-            %%   the feature flag state. If it's `true' (enabled), it means the
-            %%   migration is either in progress or done. Otherwise, we are in
-            %%   the first situation described above.
-            ?LOG_DEBUG(
-               "Feature flag `~s`:   migration done? unknown, querying node ~p",
-               [FeatureName, RemoteKhepriNode]),
-            IsEnabledRemotely = rabbit_misc:rpc_call(
-                                  RemoteKhepriNode,
-                                  rabbit_feature_flags,
-                                  is_enabled,
-                                  [FeatureName, non_blocking]),
-            ?LOG_DEBUG(
-               "Feature flag `~s`:   feature flag state on node ~p: ~p",
-               [FeatureName, RemoteKhepriNode, IsEnabledRemotely]),
-
-            %% If the RPC call fails (i.e. returns `{badrpc, ...}'), we throw
-            %% an exception because we want the migration function to abort.
-            Ret = case IsEnabledRemotely of
-                      true            -> true;
-                      state_changing  -> false;
-                      {badrpc, Error} -> throw(Error)
-                  end,
-            ?LOG_DEBUG(
-               "Feature flag `~s`:   migration done? ~s",
-               [FeatureName, Ret]),
-            Ret
-    end.
