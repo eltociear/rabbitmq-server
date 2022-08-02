@@ -1091,25 +1091,31 @@ mnesia_write_to_khepri(rabbit_semi_durable_route, _)->
     ok;
 mnesia_write_to_khepri(rabbit_reverse_route, _) ->
     ok;
-mnesia_write_to_khepri(rabbit_topic_trie_binding, TrieBindings) ->
+mnesia_write_to_khepri(rabbit_topic_trie_binding, TrieBindings0) ->
     %% There isn't enough information to rebuild the tree as the routing key is split
     %% along the trie tree on mnesia. But, we can query the bindings table (migrated
-    %% previosly) and migrate the entries that match this <X, D> combo
-    %% We'll probably update multiple times the bindings that differ only on the arguments,
-    %% but that is fine. Migration happens only once, so it is better to do a bit more of work
-    %% than skipping bindings because out of order arguments.
+    %% previosly) and migrate the entries that match this <X, D> combo.
+    %% Multiple bindings to the same exchange/destination combo need to be migrated only once.
+    %% Remove here the duplicates and use a temporary ets table to keep track of those already
+    %% migrated to really speed up things.
+    Table = ensure_topic_migration_ets(),
+    TrieBindings1 =
+        lists:uniq([{X, D} || #topic_trie_binding{trie_binding = #trie_binding{exchange_name = X,
+                                                                               destination   = D}}
+                                  <- TrieBindings0]),
+    TrieBindings = lists:filter(fun({X, D}) ->
+                                        ets:insert_new(Table, {{X, D}, empty})
+                                end, TrieBindings1),
     rabbit_khepri:transaction(
       fun() ->
               [begin
-                   #topic_trie_binding{trie_binding = #trie_binding{exchange_name = X,
-                                                                    destination   = D}} = TrieBinding,
                    Values = match_source_and_destination_in_khepri_tx(X, D),
                    Bindings = lists:foldl(fun(SetOfBindings, Acc) ->
                                                   sets:to_list(SetOfBindings) ++ Acc
                                           end, [], Values),
                    [add_topic_trie_binding_tx(X, K, D, Args) || #binding{key = K,
                                                                          args = Args} <- Bindings]
-               end || TrieBinding <- TrieBindings]
+               end || {X, D} <- TrieBindings]
       end);
 mnesia_write_to_khepri(rabbit_topic_trie_node, _) ->
     %% Nothing to do, the `rabbit_topic_trie_binding` is enough to perform the migration
@@ -1119,6 +1125,15 @@ mnesia_write_to_khepri(rabbit_topic_trie_edge, _) ->
     %% Nothing to do, the `rabbit_topic_trie_binding` is enough to perform the migration
     %% as Khepri stores each topic binding as a single path
     ok.
+
+ensure_topic_migration_ets() ->
+    Tab = rabbit_topic_trie_binding_migration_table,
+    case ets:whereis(Tab) of
+        undefined ->
+            ets:new(Tab, [public, named_table]);
+        Tid ->
+            Tid
+    end.
 
 mnesia_delete_to_khepri(rabbit_queue, Q) when ?is_amqqueue(Q) ->
     khepri_delete(khepri_queue_path(amqqueue:get_name(Q)));
