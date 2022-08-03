@@ -808,13 +808,8 @@ store_queue_without_recover(DurableQ, Q) ->
                             {ok, #{Path := #{data := ExistingQ}}} ->
                                 {existing, ExistingQ};
                             _ ->
-                                case not_found_or_absent_queue_in_khepri_tx(QueueName) of
-                                    not_found ->
-                                        store_in_khepri(Path, Q),
-                                        {created, Q};
-                                    {absent, _, _} = R ->
-                                        R
-                                end
+                                store_in_khepri(Path, Q),
+                                {created, Q}
                         end
                 end)
       end).
