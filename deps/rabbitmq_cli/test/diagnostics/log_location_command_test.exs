@@ -60,7 +60,7 @@ defmodule LogLocationCommandTest do
 
   test "run: shows all log locations", context do
     # This assumes default configuration
-    [logfile, upgrade_log_file | _] =
+    [logfile | _] =
       @command.run([], Map.merge(context[:opts], %{all: true}))
 
     log_message = "checking the default log file when checking all"
@@ -70,6 +70,6 @@ defmodule LogLocationCommandTest do
     log_message_upgrade = "checking the upgrade log file when checking all"
     :rpc.call(get_rabbit_hostname(),
               :rabbit_log, :log, [:upgrade, :error, to_charlist(log_message_upgrade), []])
-    wait_for_log_message(log_message_upgrade, upgrade_log_file)
+    wait_for_log_message(log_message_upgrade, logfile)
   end
 end
