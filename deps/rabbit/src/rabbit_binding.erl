@@ -10,7 +10,7 @@
 -include_lib("rabbit_common/include/rabbit.hrl").
 -include("amqqueue.hrl").
 
--export([recover/0, recover/2, exists/1, add/2, add/3, remove/3]).
+-export([recover/0, recover/3, exists/1, add/2, add/3, remove/3]).
 -export([list/1, list_for_source/1, list_for_destination/1,
          list_for_source_and_destination/2, list_explicit/0,
          list_between/2, has_any_between/2]).
@@ -76,9 +76,9 @@ recover() ->
 
 %% Virtual host-specific recovery
 
--spec recover([rabbit_exchange:name()], [rabbit_amqqueue:name()]) ->
+-spec recover(rabbit_vhost:name(), [rabbit_exchange:name()], [rabbit_amqqueue:name()]) ->
                         'ok'.
-recover(XNames, QNames) ->
+recover(VHost, XNames, QNames) ->
     XNameSet = sets:from_list(XNames),
     QNameSet = sets:from_list(QNames),
     {ok, Gatherer} = gatherer:start_link(),
@@ -86,6 +86,7 @@ recover(XNames, QNames) ->
                     (#resource{kind = queue})    -> QNameSet
                 end,
     rabbit_store:recover_bindings(
+      VHost,
       fun(Binding, Src, Dst, Fun, Store) ->
               recover_semi_durable_route(Gatherer, Binding, Src, Dst, SelectSet(Dst), Fun, Store)
       end),
