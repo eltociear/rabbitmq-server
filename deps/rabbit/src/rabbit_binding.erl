@@ -18,8 +18,7 @@
          process_deletions/2, notify_deletions/2, group_bindings_fold/3]).
 -export([info_keys/0, info/1, info/2, info_all/1, info_all/2, info_all/4]).
 
--export([implicit_for_destination/1, reverse_binding/1,
-         index_route_table_definition/0, populate_index_route_table/0]).
+-export([implicit_for_destination/1, reverse_binding/1, populate_index_route_table/0]).
 -export([new/4]).
 -export([reverse_route/1, index_route/1]).
 -export([binding_type/2]).

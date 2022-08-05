@@ -175,8 +175,17 @@ count_exchanges() ->
 
 list_exchange_names() ->
     rabbit_khepri:try_mnesia_or_khepri(
-      fun() -> list_names_in_mnesia(rabbit_exchange) end,
-      fun() -> list_names_in_khepri(khepri_exchanges_path()) end).
+      fun() ->
+              list_names_in_mnesia(rabbit_exchange)
+      end,
+      fun() ->
+              case rabbit_khepri:match_and_get_data(khepri_exchanges_path() ++ [?STAR_STAR]) of
+                  {ok, Map} ->
+                      maps:fold(fun(_K, X, Acc) -> [X#exchange.name | Acc] end, [], Map);
+                  _ ->
+                      []
+              end
+      end).
 
 list_exchanges(VHost) ->
     rabbit_khepri:try_mnesia_or_khepri(
@@ -638,7 +647,14 @@ list_durable_queues(VHost) ->
 list_queue_names() ->
     rabbit_khepri:try_mnesia_or_khepri(
       fun() -> list_names_in_mnesia(rabbit_queue) end,
-      fun() -> list_names_in_khepri(khepri_queues_path()) end).
+      fun() ->
+              case rabbit_khepri:match_and_get_data(khepri_queues_path() ++ [?STAR_STAR]) of
+                  {ok, Map} ->
+                      maps:fold(fun(_K, Q, Acc) -> [amqqueue:get_name(Q) | Acc] end, [], Map);
+                  _ ->
+                      []
+              end
+      end).
 
 count_queues() ->
     rabbit_khepri:try_mnesia_or_khepri(
@@ -1234,12 +1250,6 @@ count_in_khepri(Path) ->
 
 list_names_in_mnesia(Table) ->
     mnesia:dirty_all_keys(Table).
-
-list_names_in_khepri(Path) ->
-    case rabbit_khepri:match_and_get_data(Path ++ [?STAR_STAR]) of
-        {ok, Map} -> maps:keys(Map);
-        _            -> []
-    end.
 
 lookup(Name, mnesia) ->
     rabbit_misc:dirty_read(Name);
