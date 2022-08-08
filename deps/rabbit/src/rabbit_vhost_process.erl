@@ -73,6 +73,10 @@ handle_info(check_vhost, VHost) ->
                 fun() ->
                     rabbit_vhost_sup_sup:stop_and_delete_vhost(VHost)
                 end),
+            {noreply, VHost};
+        _ ->
+            %% An error just happened, the node could be down.
+            %% There is nothing we can do, just wait until the next check
             {noreply, VHost}
     end;
 handle_info(_, VHost) ->
