@@ -906,15 +906,14 @@ transient_queue_on_node_down_khepri(Config) ->
                    rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>]))),
     
     rabbit_ct_broker_helpers:stop_node(Config, Server),
-
     %% This doesn't work because we only have one route path in Khepri. If we remove it,
     %% we lose the info. If don't, it stays listed. Maybe we need a flag or else??
     %% Used to mark when transient are gone, on recovery flag them as up. Weird at least?
-    ?awaitMatch([],
+    ?awaitMatch(Bindings,
                 lists:sort(
                   rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>])),
                 30000),
-    ?awaitMatch([],
+    ?awaitMatch([_, _],
                  rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_amqqueue, list, [<<"/">>]),
                 30000),
 
