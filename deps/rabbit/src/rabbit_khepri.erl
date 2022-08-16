@@ -87,8 +87,9 @@ setup() ->
 setup(_) ->
     ?LOG_DEBUG("Starting Khepri-based " ?RA_FRIENDLY_NAME),
     ok = ensure_ra_system_started(),
+    Timeout = application:get_env(rabbit, khepri_default_timeout, 30000),
     ok = application:set_env(
-           khepri, default_timeout, 5000, [{persistent, true}]),
+           khepri, default_timeout, Timeout, [{persistent, true}]),
     RaServerConfig = #{cluster_name => ?RA_CLUSTER_NAME,
                        friendly_name => ?RA_FRIENDLY_NAME},
     case khepri:start(?RA_SYSTEM, RaServerConfig) of

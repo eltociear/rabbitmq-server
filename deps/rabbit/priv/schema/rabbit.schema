@@ -431,6 +431,9 @@ end}.
 {mapping, "metadata_store.khepri.migration_batch", "rabbit.khepri_migration_batch",
     [{datatype, integer}]}.
 
+{mapping, "metadata_store.khepri.default_timeout", "rabbit.khepri_default_timeout",
+    [{datatype, integer}]}.
+
 %% ===========================================================================
 
 %% Choose the available SASL mechanism(s) to expose.
