@@ -527,7 +527,8 @@ recover_bindings(VHost, RecoverFun) ->
               %% There are no more semi durable routes in Khepri, all durable must be
               %% recovered
               Root = khepri_routes_path_for_vhost(VHost),
-              {ok, Map} = rabbit_khepri:match_and_get_data(Root ++ [?STAR_STAR]),
+              Options = #{timeout => infinity},
+              {ok, Map} = rabbit_khepri:match_and_get_data(Root ++ [?STAR_STAR], Options),
               maps:foreach(
                 fun(Path, _) ->
                         Dst = destination_from_khepri_path(Path),
@@ -535,14 +536,15 @@ recover_bindings(VHost, RecoverFun) ->
                         RecoverFun(Path, Src, Dst, fun recover_semi_durable_route_txn/3, khepri)
                 end, Map),
               {ok, Down} = rabbit_khepri:match_and_get_data(
-                             Root ++ [?STAR_STAR, #if_data_matches{pattern = #{status => down}}]),
+                             Root ++ [?STAR_STAR, #if_data_matches{pattern = #{status => down}}],
+                             Options),
               rabbit_khepri:transaction(
                 fun() ->
                         maps:foreach(
                           fun(K, V) ->
                                   {ok, _} = khepri_tx:put(K, V#{status => up})
                           end, Down)
-                end)
+                end, rw, Options)
       end).
 
 %% Implicit bindings are implicit as of rabbitmq/rabbitmq-server#1721.
@@ -1231,7 +1233,10 @@ list_in_mnesia(Table, Match) ->
     mnesia:async_dirty(fun () -> mnesia:match_object(Table, Match, read) end).
 
 list_in_khepri(Path) ->
-    case rabbit_khepri:match_and_get_data(Path) of
+    list_in_khepri(Path, #{}).
+
+list_in_khepri(Path, Options) ->
+    case rabbit_khepri:match_and_get_data(Path, Options) of
         {ok, Map} -> maps:values(Map);
         _         -> []
     end.
@@ -1347,6 +1352,9 @@ execute_mnesia_transaction(TxFun, PrePostCommitFun) ->
                        end), false).
 
 execute_khepri_transaction(TxFun, PostCommitFun) ->
+    execute_khepri_transaction(TxFun, PostCommitFun, #{}).
+
+execute_khepri_transaction(TxFun, PostCommitFun, Options) ->
     case khepri_tx:is_transaction() of
         true  -> throw(unexpected_transaction);
         false -> ok
@@ -1354,7 +1362,7 @@ execute_khepri_transaction(TxFun, PostCommitFun) ->
     PostCommitFun(rabbit_khepri:transaction(
                     fun () ->
                             TxFun()
-                    end, rw), all).
+                    end, rw, Options), all).
 
 remove_bindings_in_mnesia(X = #exchange{name = XName}, OnlyDurable, RemoveBindingsForSource) ->
     Bindings = case RemoveBindingsForSource of
@@ -1391,13 +1399,14 @@ recover_exchanges(VHost, mnesia) ->
       rabbit_durable_exchange);
 recover_exchanges(VHost, khepri) ->
     %% Transient exchanges are deprecated in Khepri, all exchanges are recovered
-    Exchanges0 = list_in_khepri(khepri_exchanges_path() ++ [VHost, ?STAR_STAR]),
+    Exchanges0 = list_in_khepri(khepri_exchanges_path() ++ [VHost, ?STAR_STAR],
+                                #{timeout => infinity}),
     Exchanges = [rabbit_exchange_decorator:set(X) || X <- Exchanges0],
 
     rabbit_khepri:transaction(
       fun() ->
               [_ = store_exchange_in_khepri(X) || X <- Exchanges]
-      end),
+      end, rw, #{timeout => infinity}),
     %% TODO once mnesia is gone, this callback should go back to `rabbit_exchange`
     [begin
          rabbit_exchange:callback(X, create, [transaction, none], [X])
@@ -2093,7 +2102,8 @@ recover_semi_durable_route_txn(Path, X, khepri) ->
                         rabbit_exchange:callback(X, add_binding, [transaction, Serial], [X, B])
                 end, none, Set),
               ok
-      end).
+      end,
+      #{timeout => infinity}).
 
 list_queues_with_possible_retry_in_mnesia(Fun) ->
     %% amqqueue migration:

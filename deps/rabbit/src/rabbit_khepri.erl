@@ -30,7 +30,9 @@
          get/1,
          get_data/1,
          match/1,
+         match/2,
          match_and_get_data/1,
+         match_and_get_data/2,
          tx_match_and_get_data/1,
          exists/1,
          find/2,
@@ -45,6 +47,7 @@
 
          transaction/1,
          transaction/2,
+         transaction/3,
 
          clear_store/0,
 
@@ -342,10 +345,16 @@ get_data(Path) ->
         Error                 -> Error
     end.
 
-match(Path) -> khepri:get(?STORE_ID, Path).
+match(Path) ->
+    match(Path, #{}).
+
+match(Path, Options) -> khepri:get(?STORE_ID, Path, Options).
 
 match_and_get_data(Path) ->
-    Ret = match(Path),
+    match_and_get_data(Path, #{}).
+
+match_and_get_data(Path, Options) ->
+    Ret = match(Path, Options),
     keep_data_only_in_result(Ret).
 
 tx_match_and_get_data(Path) ->
@@ -353,6 +362,7 @@ tx_match_and_get_data(Path) ->
     keep_data_only_in_result(Ret).
 
 exists(Path) -> khepri:exists(?STORE_ID, Path).
+
 find(Path, Condition) -> khepri:find(?STORE_ID, Path, Condition).
 
 list(Path) -> khepri:list(?STORE_ID, Path).
@@ -386,6 +396,7 @@ keep_data_only_in_result(Error) ->
     Error.
 
 clear_payload(Path) -> khepri:clear_payload(?STORE_ID, Path).
+
 delete(Path) -> khepri:delete(?STORE_ID, Path).
 
 delete_or_fail(Path) ->
@@ -408,10 +419,13 @@ put(PathPattern, Data, Extra) ->
       ?STORE_ID, PathPattern, Data, Extra).
 
 transaction(Fun) ->
-    transaction(Fun, auto).
+    transaction(Fun, auto, #{}).
 
 transaction(Fun, ReadWrite) ->
-    case khepri:transaction(?STORE_ID, Fun, ReadWrite) of
+    transaction(Fun, ReadWrite, #{}).
+
+transaction(Fun, ReadWrite, Options) ->
+    case khepri:transaction(?STORE_ID, Fun, ReadWrite, Options) of
         {atomic, Result} -> Result;
         {aborted, Reason} -> throw({error, Reason})
     end.
