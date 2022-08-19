@@ -2060,14 +2060,15 @@ remove_transient_bindings_for_destination_in_mnesia(DstName) ->
 
 recover_bindings_in_mnesia() ->
     rabbit_misc:execute_mnesia_transaction(
-        fun () ->
-            mnesia:lock({table, rabbit_durable_route}, read),
-            mnesia:lock({table, rabbit_semi_durable_route}, write),
-            Routes = rabbit_misc:dirty_read_all(rabbit_durable_route),
-            Fun = fun(Route) ->
-                mnesia:dirty_write(rabbit_semi_durable_route, Route)
-            end,
-        lists:foreach(Fun, Routes)
+      fun () ->
+              mnesia:lock({table, rabbit_durable_route}, read),
+              mnesia:lock({table, rabbit_semi_durable_route}, write),
+              Routes = rabbit_misc:dirty_read_all(rabbit_durable_route),
+              Fun = fun(Route) ->
+                            mnesia:dirty_write(rabbit_semi_durable_route, Route)
+                    end,
+              lists:foreach(Fun, Routes),
+              ok
     end).
 
 recover_semi_durable_route_txn(#route{binding = B} = Route, X, mnesia) ->
