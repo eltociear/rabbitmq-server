@@ -6,25 +6,15 @@ on:
 jobs:
   make-test-runner-imager:
     runs-on: ubuntu-latest
+    container: node:14.15.4
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Build test runner image
-        uses: docker/build-push-action@v2
-        with:
-          context: ./deps/rabbitmq_management/selenium/
-          file: ./deps/rabbitmq_management/selenium/Dockerfile-with-tests
-          push: false
-          tags: mocha-test
-          target: test
-
-  run-tests:
-    runs-on: ubuntu-latest
-    needs: make-test-runner-imager
-    container:
-      image: mocha-test
-      env:
-        RABBITMQ_URL: http://rabbitmq:15672
-    services:
-      rabbotmq:
-        image: pivotalrabbitmq/rabbitmq:69a4159f3482e5212d364f499b2ca2e05bede0ca-otp-min
+    - uses: actions/checkout@v2
+    - name: install
+      run: |
+        ls
+        cd deps/rabbitmq_management/selenium
+        npm install
+    - name: run
+      run: |
+        cd deps/rabbitmq_management/selenium
+       ./node_modules/.bin/mocha --recursive --trace-warnings --timeout 35000 test/oauth/with-uaa
