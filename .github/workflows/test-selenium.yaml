@@ -21,7 +21,9 @@ jobs:
       run: |
         cd deps/rabbitmq_management/selenium
         source bin/rabbitmq.sh
+        echo "running RabbitMQ..."
         start_rabbitmq
+        docker wait local-rabbitmq
         make run-tests
 
 
