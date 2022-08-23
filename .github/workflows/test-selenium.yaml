@@ -6,15 +6,10 @@ on:
 jobs:
   make-test-runner-imager:
     runs-on: ubuntu-latest
-    container: node:14.15.4
+    container:
+      node:14.15.4
     steps:
-    - uses: actions/checkout@v2
-    - name: install
+      - name: hello
       run: |
-        ls
-        cd deps/rabbitmq_management/selenium
-        npm install
-    - name: run
-      run: |
-        cd deps/rabbitmq_management/selenium
-       ./node_modules/.bin/mocha --recursive --trace-warnings --timeout 35000 test/oauth/with-uaa
+        echo "!hello world"
+       
