@@ -2,17 +2,14 @@ name: Test Management UI with Selenium
 on:
   push:
     branches:
-    - oidc-integration
+    - oidc-integration-github-action
 jobs:
-  checkout-tests:
+  Demo:
     runs-on: ubuntu-latest
     steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - name: Check out repository code
         uses: actions/checkout@v3
-  run-selenimum-test:
-    runs-on: ubuntu-latest
-    needs: checkout-tests
-    steps:
       - name: List tests
         run: |
-          ls ${{ github.workspace }}
+          ls ${{ github.workspace }}/deps/rabbitmq_management/selenium
