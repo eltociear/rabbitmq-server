@@ -559,23 +559,17 @@ delete_binding(Binding) ->
 
 %% Queues
 list_queues() ->
-    All = rabbit_khepri:try_mnesia_or_khepri(
-            fun() -> list_queues_with_possible_retry_in_mnesia(
-                       fun() ->
-                               list_in_mnesia(rabbit_queue, amqqueue:pattern_match_all())
-                       end)
-            end,
-            fun() -> list_queues_with_possible_retry_in_khepri(
-                       fun() ->
-                               list_in_khepri(khepri_queues_path() ++ [?STAR_STAR])
-                       end)
-            end),
-    NodesRunning = rabbit_nodes:all_running(),
-    lists:filter(fun (Q) ->
-                         Pid = amqqueue:get_pid(Q),
-                         St = amqqueue:get_state(Q),
-                         St =/= stopped orelse lists:member(node(Pid), NodesRunning)
-                 end, All).
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() -> list_queues_with_possible_retry_in_mnesia(
+                 fun() ->
+                         list_in_mnesia(rabbit_queue, amqqueue:pattern_match_all())
+                 end)
+      end,
+      fun() -> list_queues_with_possible_retry_in_khepri(
+                 fun() ->
+                         list_in_khepri(khepri_queues_path() ++ [?STAR_STAR])
+                 end)
+      end).
 
 list_durable_queues() ->
     rabbit_khepri:try_mnesia_or_khepri(

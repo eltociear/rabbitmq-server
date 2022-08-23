@@ -851,14 +851,14 @@ transient_queue_on_node_down_mnesia(Config) ->
 
     rabbit_ct_broker_helpers:stop_node(Config, Server),
 
-    ?assertEqual([],
-                 rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>])),
-    ?assertEqual([],
+    Bindings1 = lists:sort([DefaultBinding, DirectBinding]),
+    ?assertEqual(Bindings1,
+                 lists:sort(rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>]))),
+    ?assertMatch([_],
                  rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_amqqueue, list, [<<"/">>])),
 
     rabbit_ct_broker_helpers:start_node(Config, Server),
 
-    Bindings1 = lists:sort([DefaultBinding, DirectBinding]),
     ?awaitMatch(Bindings1,
                 lists:sort(
                   rabbit_ct_broker_helpers:rpc(Config, 1, rabbit_binding, list, [<<"/">>])),
