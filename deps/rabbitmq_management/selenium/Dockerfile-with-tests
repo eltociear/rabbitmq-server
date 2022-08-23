@@ -9,3 +9,4 @@ FROM base as test
 RUN npm install
 ADD test /test
 ENTRYPOINT [ "./node_modules/.bin/mocha", "--recursive", "--trace-warnings", "--timeout 35000"]
+CMD [ "/test/oauth/with-uaa" ]
