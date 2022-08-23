@@ -6,9 +6,7 @@ on:
 jobs:
   make-test-runner-imager:
     runs-on: ubuntu-latest
-    container:
-      image: node:14.15.4
     steps:
       - name: hello
-      run: |
-        echo "!hello world"
+        run: |
+          echo "!hello world"
