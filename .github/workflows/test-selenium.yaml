@@ -10,15 +10,10 @@ jobs:
       - name: Build test runner image
         uses: docker/build-push-action@v3
         with:
-          file: {{defaultContext}}/deps/rabbitmq_management/selenium/Dockerfile-with-tests
+          file: {context}/deps/rabbitmq_management/selenium/Dockerfile-with-tests
           push: false
           tags: mocha-test
           target: test
-
-#      - name: Build rabbitmq image
-#        run: |
-#          make package-generic-unix
-#          make docker-image
   run-tests:
     runs-on: ubuntu-latest
     needs: make-test-runner-imager
