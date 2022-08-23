@@ -6,6 +6,7 @@ on:
 jobs:
   selenimum:
     runs-on: ubuntu-latest
+
     steps:
     - name: Checkout
       uses: actions/checkout@v3
@@ -19,7 +20,10 @@ jobs:
       name: Call mocha-test
       run: |
         cd deps/rabbitmq_management/selenium
+        source bin/rabbitmq.sh
+        start_rabbitmq
         make run-tests
+
 
 ####
 # We need to run these as docker images:
