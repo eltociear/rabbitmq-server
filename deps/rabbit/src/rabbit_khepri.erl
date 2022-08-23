@@ -56,7 +56,9 @@
          is_enabled/0,
          is_enabled/1,
          nodes_if_khepri_enabled/0,
-         try_mnesia_or_khepri/2]).
+         try_mnesia_or_khepri/2,
+
+         status/0]).
 %% Flag used during migration
 -export([is_ready/0,
          set_ready/0]).
@@ -311,6 +313,49 @@ get_store_id() ->
 
 dir() ->
     filename:join(rabbit_mnesia:dir(), atom_to_list(?STORE_ID)).
+
+status() ->
+    Nodes = rabbit_nodes:all_running(),
+    [begin
+         case get_sys_status({metadata_store, N}) of
+             {ok, Sys} ->
+                 {_, M} = lists:keyfind(ra_server_state, 1, Sys),
+                 {_, RaftState} = lists:keyfind(raft_state, 1, Sys),
+                 #{commit_index := Commit,
+                   machine_version := MacVer,
+                   current_term := Term,
+                   log := #{last_index := Last,
+                            snapshot_index := SnapIdx}} = M,
+                 [{<<"Node Name">>, N},
+                  {<<"Raft State">>, RaftState},
+                  {<<"Log Index">>, Last},
+                  {<<"Commit Index">>, Commit},
+                  {<<"Snapshot Index">>, SnapIdx},
+                  {<<"Term">>, Term},
+                  {<<"Machine Version">>, MacVer}
+                 ];
+             {error, Err} ->
+                 [{<<"Node Name">>, N},
+                  {<<"Raft State">>, Err},
+                  {<<"Log Index">>, <<>>},
+                  {<<"Commit Index">>, <<>>},
+                  {<<"Snapshot Index">>, <<>>},
+                  {<<"Term">>, <<>>},
+                  {<<"Machine Version">>, <<>>}
+                 ]
+         end
+     end || N <- Nodes].
+
+get_sys_status(Proc) ->
+    try lists:nth(5, element(4, sys:get_status(Proc))) of
+        Sys -> {ok, Sys}
+    catch
+        _:Err when is_tuple(Err) ->
+            {error, element(1, Err)};
+        _:_ ->
+            {error, other}
+
+    end.
 
 %% -------------------------------------------------------------------
 %% "Proxy" functions to Khepri API.
