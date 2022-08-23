@@ -12,7 +12,7 @@ jobs:
       - name: Build test runner image
         uses: docker/build-push-action@v2
         with:
-          context: .
+          context: ./deps/rabbitmq_management/selenium/
           file: ./deps/rabbitmq_management/selenium/Dockerfile-with-tests
           push: false
           tags: mocha-test
