@@ -9,7 +9,7 @@ jobs:
     steps:
       - name: hello
         run: |
-          curl rabbimq:15672/api/overview
+          curl rabbitmq:15672/api/overview
     services:
       rabbitmq:
         image: pivotalrabbitmq/rabbitmq:69a4159f3482e5212d364f499b2ca2e05bede0ca-otp-min
