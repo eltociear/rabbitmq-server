@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build test runner image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           file: {{defaultContext}}/deps/rabbitmq_management/selenium/Dockerfile-with-tests
           push: false
