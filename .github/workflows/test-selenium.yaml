@@ -23,5 +23,5 @@ jobs:
     steps:
       - name: List tests
         run: |
-          ls deps/rabbitmq_management/selenium
+          ls ${{ github.workspace }}/deps/rabbitmq_management/selenium
           docker images | grep mocha-test
