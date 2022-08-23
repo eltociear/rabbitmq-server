@@ -4,21 +4,25 @@ on:
     branches:
     - oidc-integration-github-action
 jobs:
-  make-test-runner-imager:
+  selenimum:
     runs-on: ubuntu-latest
-    container: curlimages/curl
     services:
-      rabbitmq:
-        image: pivotalrabbitmq/rabbitmq:69a4159f3482e5212d364f499b2ca2e05bede0ca-otp-min
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     steps:
-    - uses: actions/checkout@v2
-      with:
-        options: --user root
-    - name: reach rabbitmq
-      run: |
-          ls .
-          curl -u guest:guest http://rabbitmq:15672/api/overview
-
+      - name: Checkout
+        uses: actions/checkout@v3
+      -
+        name: Build and push to local registry
+        uses: docker/build-push-action@v3
+        with:
+          context: ./deps/rabbitmq_management/selenium
+          tags: localhost:5000/mocha-test
+      -
+        uses: localhost:5000/mocha-test
+        
 ####
 # We need to run these as docker images:
 #  UAA
