@@ -11,6 +11,8 @@ jobs:
       rabbitmq:
         image: pivotalrabbitmq/rabbitmq:69a4159f3482e5212d364f499b2ca2e05bede0ca-otp-min
     steps:
+    - uses: actions/checkout@v2
     - name: reach rabbitmq
       run: |
-          curl rabbitmq:15672/api/overview
+          ls .
+          curl -u guest:guest http://rabbitmq:15672/api/overview
