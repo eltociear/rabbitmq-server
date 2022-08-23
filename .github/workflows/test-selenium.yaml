@@ -19,7 +19,7 @@ jobs:
     -
       name: Call mocha-test
       run: |
-        gem list cf-uaac
+        
         cd deps/rabbitmq_management/selenium
         source bin/rabbitmq.sh
         echo "running RabbitMQ..."
