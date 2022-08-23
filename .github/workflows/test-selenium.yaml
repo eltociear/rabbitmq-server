@@ -18,11 +18,11 @@ jobs:
         name: Build and push to local registry
         uses: docker/build-push-action@v3
         with:
-          context: ./deps/rabbitmq_management/selenium
-          tags: localhost:5000/mocha-test
-      -
-        uses: localhost:5000/mocha-test
-        
+          context: .
+          tags: localhost:5000/mocha-test:latest
+      - name: run tests
+        uses: localhost:5000/mocha-test:latest
+
 ####
 # We need to run these as docker images:
 #  UAA
