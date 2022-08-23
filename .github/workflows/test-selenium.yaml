@@ -18,3 +18,21 @@ jobs:
       run: |
           ls .
           curl -u guest:guest http://rabbitmq:15672/api/overview
+
+####
+# We need to run these as docker images:
+#  UAA
+#  RabbitMQ
+#  Selenium Tests (maybe these ones could run in the host machine)
+#  Selenium Hub (which runs the browser in silent mode)
+
+# The workflow is more or less like this:
+# job:build-rabbitmq-image  -> job:build-test-runner-image -> job:run-tests
+
+# job:build-rabbitmq-image : Ideally, we do not want to push it. can we do that in github actions?
+#
+# job:run-tests : It runs within a container and it uses these services:
+#  - rabbitmq
+#  - UAA
+#  - selenium-hub
+# and it has this step which uses the image test-runner built by the job build-test-runner-image
