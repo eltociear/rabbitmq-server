@@ -19,11 +19,13 @@ jobs:
     -
       name: Call mocha-test
       run: |
+        gem list cf-uaac
         cd deps/rabbitmq_management/selenium
         source bin/rabbitmq.sh
         echo "running RabbitMQ..."
-        start_rabbitmq
-        docker wait local-rabbitmq
+        RABBITMQ_CONFIG=$PWD/test/oauth/with-uaa/rabbitmq.config start_rabbitmq
+        sleep 5
+        docker exec -it local-rabbitmq rabbitmqctl await_startup
         make run-tests
 
 
