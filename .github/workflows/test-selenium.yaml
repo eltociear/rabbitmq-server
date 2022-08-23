@@ -4,12 +4,18 @@ on:
     branches:
     - oidc-integration-github-action
 jobs:
-  Demo:
+  make-test-runner-imager:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - name: Check out repository code
         uses: actions/checkout@v3
+      - name: Build image
+        run: |
+          cd deps/rabbitmq_management/selenium
+          make init-tests
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
       - name: List tests
         run: |
           ls ${{ github.workspace }}/deps/rabbitmq_management/selenium
