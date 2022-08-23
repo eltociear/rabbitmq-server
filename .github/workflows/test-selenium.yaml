@@ -12,6 +12,8 @@ jobs:
         image: pivotalrabbitmq/rabbitmq:69a4159f3482e5212d364f499b2ca2e05bede0ca-otp-min
     steps:
     - uses: actions/checkout@v2
+      with:
+        options: --user root
     - name: reach rabbitmq
       run: |
           ls .
