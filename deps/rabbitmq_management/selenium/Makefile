@@ -25,4 +25,5 @@ init-tests: ## Prepare docker image to run tests
 run-tests: ## Run tests
 	#@(test/oauth/with-uaa/setup.sh)
 	@(docker network inspect rabbitmq_net >/dev/null 2>&1 || docker network create rabbitmq_net)
+	@(echo "Running selenium tests ...")
 	@(docker run --rm  --name mocha --net rabbitmq_net --env RABBITMQ_URL=http://local-rabbitmq:15672 -v ${PWD}/test:/code/test mocha-test /code/test/oauth/with-uaa)
