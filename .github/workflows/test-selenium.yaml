@@ -6,22 +6,13 @@ on:
 jobs:
   selenimum:
     runs-on: ubuntu-latest
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
-    steps:
+      steps:
       - name: Checkout
         uses: actions/checkout@v3
       -
-        name: Build and push to local registry
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          tags: localhost:5000/mocha-test:latest
-      - name: run tests
-        uses: localhost:5000/mocha-test:latest
+        name: Call docker directly
+        run: |
+          docker --help
 
 ####
 # We need to run these as docker images:
