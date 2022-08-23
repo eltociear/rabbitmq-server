@@ -10,9 +10,16 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
     -
-      name: Call docker directly
+      name: Build mocha-test
       run: |
-        docker --help
+        cd deps/rabbitmq_management/selenium
+        make init-tests
+        docker images | grep mocha-test
+    -
+      name: Call mocha-test
+      run: |
+        cd deps/rabbitmq_management/selenium
+        make run-tests
 
 ####
 # We need to run these as docker images:
