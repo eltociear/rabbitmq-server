@@ -6,10 +6,11 @@ on:
 jobs:
   make-test-runner-imager:
     runs-on: ubuntu-latest
-    steps:
-      - name: hello
-        run: |
-          curl rabbitmq:15672/api/overview
+    container: curlimages/curl
     services:
       rabbitmq:
         image: pivotalrabbitmq/rabbitmq:69a4159f3482e5212d364f499b2ca2e05bede0ca-otp-min
+    steps:
+    - name: reach rabbitmq
+      run: |
+          curl rabbitmq:15672/api/overview
