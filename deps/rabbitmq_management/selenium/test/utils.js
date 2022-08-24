@@ -2,7 +2,7 @@ const {By,Key,until,Builder} = require("selenium-webdriver");
 require("chromedriver");
 
 var baseUrl = process.env.RABBITMQ_URL;
-var runLocal = process.env.RUN_LOCAL;
+var runLocal = (String(process.env.RUN_LOCAL).toLowerCase() == "true");
 var seleniumUrl = process.env.SELENIUM_URL;
 if (!process.env.RUN_LOCAL) {
   runLocal = true;
@@ -16,9 +16,16 @@ if (!process.env.SELENIUM_URL) {
 
 module.exports = {
   buildDriver: (caps) => {
-    builder = new Builder().forBrowser('chrome');
+    console.log("RABBITMQ_URL: " + baseUrl);
+
+    console.log("SELENIUM_URL: " + seleniumUrl);
+    builder = new Builder();
     if (!runLocal) {
-      builder = builder.usingServer(seleniumUrl)
+      console.log("RUN_REMOTE");
+      builder = builder.usingServer(seleniumUrl).forBrowser('chrome');
+    }else {
+      console.log("RUN_LOCAL");
+      builder = builder.forBrowser('chrome');
     }
     driver = builder.build();
     return driver;

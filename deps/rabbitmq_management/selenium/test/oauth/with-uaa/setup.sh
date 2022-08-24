@@ -2,7 +2,8 @@
 
 SCRIPT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-export RABBITMQ_CONFIG=${SCRIPT}/rabbitmq.config
+export RABBITMQ_CONFIG=${SCRIPT}/${RABBITMQ_CONFIG_FILE:-rabbitmq.config}
+export UAA_CONFIG=${SCRIPT}/${UAA_CONFIG_FOLDER:-uaa}
 
 . $SCRIPT/../../../bin/rabbitmq.sh
 
@@ -20,7 +21,7 @@ start_uaa() {
   		--detach \
       --name uaa --net rabbitmq_net \
   		--publish 8080:8080 \
-  		--mount "type=bind,source=${SCRIPT}/uaa,target=/uaa" \
+  		--mount "type=bind,source=${UAA_CONFIG},target=/uaa" \
   		--env UAA_CONFIG_PATH="/uaa" \
   		--env JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom" \
       "${UAA_IMAGE_NAME}:${UAA_IMAGE_TAG}"
