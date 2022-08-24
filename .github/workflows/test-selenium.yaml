@@ -11,6 +11,8 @@ jobs:
     services:
       selenium:
         image: selenium/standalone-${{ matrix.browser }}
+        ports:
+        - 4444:4444
     strategy:
       fail-fast: false
       matrix:
