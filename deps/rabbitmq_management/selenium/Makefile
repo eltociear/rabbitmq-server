@@ -19,11 +19,14 @@ run-chrome: ## Install Selenium Chrome
 	#@(docker run -d --name selenium --net rabbitmq_selenimum_net -p 4444:4444 --shm-size=2g selenium/standalone-chrome)
 	@(echo "Selenium Standalone is running on http://localhost:4444/")
 
-init-tests: ## Prepare docker image to run tests
+build-test-runner-image: ## Prepare docker image to run tests
 	@(docker build -t mocha-test  --target test .)
 
-run-tests: ## Run tests
+init-test: ## Deploy RAbbitMQ and UAA to run the test
+	@(test/oauth/with-uaa/setup.sh)
+	
+run-test: ## Run tests oauth/with-uaa
 	#@(test/oauth/with-uaa/setup.sh)
 	@(docker network inspect rabbitmq_net >/dev/null 2>&1 || docker network create rabbitmq_net)
 	@(echo "Running selenium tests ...")
-	@(docker run --rm  --name mocha --net rabbitmq_net --env RABBITMQ_URL=http://local-rabbitmq:15672 -v ${PWD}/test:/code/test mocha-test /code/test/oauth/with-uaa)
+	@(docker run --rm  --name mocha --net rabbitmq_net --env RABBITMQ_URL=http://localhost:15672 -v ${PWD}/test:/code/test mocha-test /code/test/oauth/with-uaa)
