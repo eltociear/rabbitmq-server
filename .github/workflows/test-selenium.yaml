@@ -30,6 +30,7 @@ jobs:
         cache-dependency-path: deps/rabbitmq_management/selenium/package.json
 
     - name: npm install
+      working-directory: deps/rabbitmq_management/selenium
       run: npm i
 
     - name: Test
