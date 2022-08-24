@@ -113,8 +113,8 @@ jobs:
           cloudfoundry/uaa:latest
 
     - name: Build Tester Image
-      working-directory: ${SELENIUM_DIR}
       run: |
+        cd ${SELENIUM_DIR}
         docker build -t mocha-test --target test .
 
     - name: Run Tests
