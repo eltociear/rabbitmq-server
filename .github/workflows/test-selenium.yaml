@@ -62,6 +62,11 @@ jobs:
 
     - name: Build RabbitMQ OCI
       run: |
+        bazelisk build packaging/docker-image:rabbitmq \
+          --config=buildbuddy
+
+    - name: Load RabbitMQ OCI
+      run: |
         bazelisk run packaging/docker-image:rabbitmq \
           --config=buildbuddy
 
