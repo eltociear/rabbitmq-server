@@ -78,8 +78,8 @@ jobs:
 
     - name: Start RabbitMQ
       run: |
-        RABBITMQ_CONFIG="${SELENIUM_DIR}/test/oauth/with-uaa/rabbitmq.config"
-        ENABLED_PLUGINS="${SELENIUM_DIR}/bin/enabled_plugins"
+        RABBITMQ_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/rabbitmq.config"
+        ENABLED_PLUGINS="${PWD}/${SELENIUM_DIR}/bin/enabled_plugins"
         docker run \
           --detach \
           --name local-rabbitmq \
