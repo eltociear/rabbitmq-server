@@ -41,6 +41,8 @@ jobs:
 
     - name: Configure Bazel
       run: |
+        ERLANG_HOME="$(dirname $(dirname $(which erl)))"
+        ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
         if [ -n "${{ secrets.BUILDBUDDY_API_KEY }}" ]; then
         cat << EOF >> user.bazelrc
           build:buildbuddy --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
@@ -52,14 +54,20 @@ jobs:
           build:buildbuddy --repository_cache=/home/runner/repo-cache/
           build:buildbuddy --color=yes
           build:buildbuddy --disk_cache=
-        EOF
 
-        bazelisk info release
+          build --@rules_erlang//:erlang_version=${{ matrix.erlang_version }}
+          build --@rules_erlang//:erlang_home=${ERLANG_HOME}
+          build --//:elixir_home=${ELIXIR_HOME}
+          build --platforms=//bazel/platforms:erlang_external_platform
+          build --extra_execution_platforms=//bazel/platforms:erlang_external_platform
+        EOF
 
     - name: Start Backgroung Broker
       run: |
         bazelisk run --config=local :rabbitmq-run \
-          start-background-broker
+          start-background-broker \
+          RABBITMQ_CONFIG_FILE=deps/rabbitmq_management/selenium/test/oauth/with-uaa/rabbitmq.config \
+          RABBITMQ_ENABLED_PLUGINS_FILE=deps/rabbitmq_management/selenium/bin/enabled_plugins
 
     - uses: actions/setup-node@v2
       with:
