@@ -101,18 +101,18 @@ jobs:
 
     - name: Start UAA
       run: |
-        UAA_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa/uaa.yml"
+        UAA_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa"
         docker run \
           --detach \
           --name local-uaa \
           --net ${DOCKER_NETWORK} \
           --publish 8080:8080 \
-          --mount type=bind,source=${UAA_CONFIG},target=/uaa.yml \
-          --env CLOUDFOUNDRY_CONFIG_PATH= \
-          --env spring_profiles=default,hsqldb \
-          cloudfoundry/uaa:latest
+          --mount "type=bind,source=${UAA_CONFIG},target=/uaa" \
+      		--env UAA_CONFIG_PATH="/uaa" \
+      		--env JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom" \
+          cloudfoundry/uaa:75.21.0
 
-    - name: Build Tester Image
+    - name: Build Test Runner Image
       run: |
         cd ${SELENIUM_DIR}
         docker build -t mocha-test --target test .
@@ -125,6 +125,7 @@ jobs:
           --name mocha \
           --net ${DOCKER_NETWORK} \
           --env RABBITMQ_URL=http://local-rabbitmq:15672 \
+          --env RUN_LOCAL=false \
           -v ${TEST_DIR}:/code/test mocha-test /code/test/oauth/with-uaa
     #! - name: Start Backgroung Broker
     #!   run: |
