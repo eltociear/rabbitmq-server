@@ -62,15 +62,15 @@ jobs:
           build --@io_bazel_rules_docker//transitions:enable=false
         EOF
 
-    - name: Build RabbitMQ OCI
-      run: |
-        bazelisk build packaging/docker-image:rabbitmq \
-          --config=buildbuddy
-
-    - name: Load RabbitMQ OCI
+    - name: Build & Load RabbitMQ OCI
       run: |
         bazelisk run packaging/docker-image:rabbitmq \
           --config=buildbuddy
+
+    #! - name: Load RabbitMQ OCI
+    #!   run: |
+    #!     bazelisk run packaging/docker-image:rabbitmq \
+    #!       --config=buildbuddy
 
     - name: Configure Docker Network
       run: |
@@ -78,8 +78,8 @@ jobs:
 
     - name: Start RabbitMQ
       run: |
-        RABBITMQ_CONFIG: ${SELENIUM_DIR}/test/oauth/with-uaa/rabbitmq.config
-        ENABLED_PLUGINS: ${SELENIUM_DIR}/bin/enabled_plugins
+        RABBITMQ_CONFIG="${SELENIUM_DIR}/test/oauth/with-uaa/rabbitmq.config"
+        ENABLED_PLUGINS="${SELENIUM_DIR}/bin/enabled_plugins"
         docker run \
           --detach \
           --name local-rabbitmq \
@@ -101,7 +101,7 @@ jobs:
 
     - name: Start UAA
       run: |
-        UAA_CONFIG_DIR=${SELENIUM_DIR}/test/oauth/with-uaa/uaa
+        UAA_CONFIG_DIR="${SELENIUM_DIR}/test/oauth/with-uaa/uaa"
         docker run \
           --detach \
           --name local-uaa \
