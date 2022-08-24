@@ -101,15 +101,16 @@ jobs:
 
     - name: Start UAA
       run: |
-        UAA_CONFIG_DIR="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa"
+        UAA_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa/uaa.yml"
         docker run \
           --detach \
           --name local-uaa \
           --net ${DOCKER_NETWORK} \
           --publish 8080:8080 \
-          --mount type=bind,source=${UAA_CONFIG_DIR},target=/etc/uaa \
-          --env JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom" \
-          uaa:latest
+          --mount type=bind,source=${UAA_CONFIG},target=/uaa.yml \
+          --env CLOUDFOUNDRY_CONFIG_PATH= \
+          --env spring_profiles=default,hsqldb \
+          cloudfoundry/uaa:latest
 
     - name: Build Tester Image
       working-directory: ${SELENIUM_DIR}
