@@ -2,31 +2,54 @@ name: Test Management UI with Selenium
 on:
   push:
     branches:
-    - oidc-integration-github-action
+    - pjk25/oidc-integration-github-action
 jobs:
   selenimum:
     runs-on: ubuntu-latest
-
+    #! container:
+    #!   image: node:16
+    services:
+      selenium:
+        image: selenium/standalone-${{ matrix.browser }}
+    strategy:
+      fail-fast: false
+      matrix:
+        erlang_major:
+        - "24"
+        #! - "25"
+        browser:
+        - chrome
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    -
-      name: Build mocha-test
-      run: |
-        cd deps/rabbitmq_management/selenium
-        make init-tests
-        docker images | grep mocha-test
-    -
-      name: Call mocha-test
-      run: |
-        
-        cd deps/rabbitmq_management/selenium
-        source bin/rabbitmq.sh
-        echo "running RabbitMQ..."
-        RABBITMQ_CONFIG=$PWD/test/oauth/with-uaa/rabbitmq.config start_rabbitmq
-        sleep 5
-        docker exec -it local-rabbitmq rabbitmqctl await_startup
-        make run-tests
+
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: npm clean-install
+      run: npm ci
+    - name: Test
+      env:
+        BROWSER: ${{ matrix.browser }}
+      working-directory: deps/rabbitmq_management/selenium
+      run: npm run test
+
+    #! - name: Build mocha-test
+    #!   run: |
+    #!     cd deps/rabbitmq_management/selenium
+    #!     make init-tests
+    #!     docker images | grep mocha-test
+    #! - name: Call mocha-test
+    #!   run: |
+    #!     cd deps/rabbitmq_management/selenium
+    #!     source bin/rabbitmq.sh
+    #!     echo "running RabbitMQ..."
+    #!     RABBITMQ_CONFIG=$PWD/test/oauth/with-uaa/rabbitmq.config start_rabbitmq
+    #!     sleep 5
+    #!     docker exec -it local-rabbitmq rabbitmqctl await_startup
+    #!     make run-tests
 
 
 ####
