@@ -101,7 +101,7 @@ jobs:
 
     - name: Start UAA
       run: |
-        UAA_CONFIG_DIR="${SELENIUM_DIR}/test/oauth/with-uaa/uaa"
+        UAA_CONFIG_DIR="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa"
         docker run \
           --detach \
           --name local-uaa \
@@ -117,14 +117,14 @@ jobs:
         docker build -t mocha-test --target test .
 
     - name: Run Tests
-      working-directory: ${SELENIUM_DIR}
       run: |
+        TEST_DIR="${PWD}/${SELENIUM_DIR}/test"
         docker run \
           --rm \
           --name mocha \
           --net ${DOCKER_NETWORK} \
           --env RABBITMQ_URL=http://local-rabbitmq:15672 \
-          -v ${PWD}/test:/code/test mocha-test /code/test/oauth/with-uaa
+          -v ${TEST_DIR}:/code/test mocha-test /code/test/oauth/with-uaa
     #! - name: Start Backgroung Broker
     #!   run: |
     #!     bazelisk run --config=local :rabbitmq-run \
