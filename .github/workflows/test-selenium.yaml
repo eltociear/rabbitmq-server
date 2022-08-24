@@ -51,6 +51,8 @@ jobs:
           build:buildbuddy --color=yes
           build:buildbuddy --disk_cache=
 
+          build:buildbuddy --remote_download_toplevel
+
           build --@rules_erlang//:erlang_version=${{ matrix.erlang_version }}
           build --@rules_erlang//:erlang_home=${ERLANG_HOME}
           build --//:elixir_home=${ELIXIR_HOME}
