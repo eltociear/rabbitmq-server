@@ -16,14 +16,50 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        erlang_major:
+        erlang_version:
         - "24"
-        #! - "25"
         browser:
         - chrome
+        include:
+        - erlang_version: "24"
+          elixir_version: 1.12.3
     steps:
     - name: Checkout
       uses: actions/checkout@v3
+
+    - name: Configure OTP & Elixir
+      uses: erlef/setup-beam@v1.12
+      with:
+        otp-version: ${{ matrix.erlang_version }}
+        elixir-version: ${{ matrix.elixir_version }}
+
+    - name: Mount Bazel Cache
+      uses: actions/cache@v3.0.8
+      with:
+        path: "/home/runner/repo-cache/"
+        key: repo-cache
+
+    - name: Configure Bazel
+      run: |
+        if [ -n "${{ secrets.BUILDBUDDY_API_KEY }}" ]; then
+        cat << EOF >> user.bazelrc
+          build:buildbuddy --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+        EOF
+        fi
+        cat << EOF >> user.bazelrc
+          build:buildbuddy --build_metadata=ROLE=CI
+          build:buildbuddy --build_metadata=VISIBILITY=PUBLIC
+          build:buildbuddy --repository_cache=/home/runner/repo-cache/
+          build:buildbuddy --color=yes
+          build:buildbuddy --disk_cache=
+        EOF
+
+        bazelisk info release
+
+    - name: Start Backgroung Broker
+      run: |
+        bazelisk run --config=local :rabbitmq-run \
+          start-background-broker
 
     - uses: actions/setup-node@v2
       with:
@@ -38,6 +74,7 @@ jobs:
     - name: Test
       env:
         BROWSER: ${{ matrix.browser }}
+        RABBITMQ_URL: http://localhost:15672
       working-directory: deps/rabbitmq_management/selenium
       run: npm run test
 
