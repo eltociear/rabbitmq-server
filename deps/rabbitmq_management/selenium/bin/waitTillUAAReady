@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-ax_retry=5
+max_retry=10
 counter=0
 until (curl localhost:8080/.well-known/openid-configuration >/dev/null 2>&1)
 do

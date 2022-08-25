@@ -1,7 +1,7 @@
 const {By,Key,until,Builder} = require("selenium-webdriver");
 require("chromedriver");
 var assert = require('assert');
-const {buildDriver, goToHome} = require("../../utils");
+const {buildDriver, goToHome, teardown} = require("../../utils");
 
 var SSOHomePage = require('../../pageobjects/SSOHomePage')
 var UAALoginPage = require('../../pageobjects/UAALoginPage')
@@ -30,11 +30,6 @@ describe("An UAA user with administrator tag", function() {
   });
 
   after(async function() {
-    if (this.currentTest.isPassed) {
-      driver.executeScript("lambda-status=passed");
-    } else {
-      driver.executeScript("lambda-status=failed");
-    }
-    await driver.quit();
+    await teardown(driver, this)
   });
 })
