@@ -58,7 +58,8 @@
          nodes_if_khepri_enabled/0,
          try_mnesia_or_khepri/2,
 
-         status/0]).
+         status/0,
+         configure_snapshot_interval/1]).
 %% Flag used during migration
 -export([is_ready/0,
          set_ready/0]).
@@ -96,7 +97,9 @@ setup(_) ->
     ok = application:set_env(
            khepri, default_timeout, Timeout, [{persistent, true}]),
     RaServerConfig = #{cluster_name => ?RA_CLUSTER_NAME,
-                       friendly_name => ?RA_FRIENDLY_NAME},
+                       friendly_name => ?RA_FRIENDLY_NAME,
+                       machine_config => #{snapshot_interval => 4096}
+                      },
     case khepri:start(?RA_SYSTEM, RaServerConfig) of
         {ok, ?STORE_ID} ->
             ?LOG_DEBUG(
@@ -356,6 +359,9 @@ get_sys_status(Proc) ->
             {error, other}
 
     end.
+
+configure_snapshot_interval(SnapshotInterval) ->
+    khepri:configure(?STORE_ID, #{snapshot_interval => SnapshotInterval}).
 
 %% -------------------------------------------------------------------
 %% "Proxy" functions to Khepri API.

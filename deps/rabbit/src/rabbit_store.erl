@@ -63,6 +63,7 @@
          clear_data_in_khepri/1]).
 
 -export([init/0, sync/0]).
+-export([pre_import/0, post_import/0]).
 
 -define(WAIT_SECONDS, 30).
 
@@ -93,6 +94,24 @@ sync() ->
       end,
       fun() ->
               ok
+      end).
+
+pre_import() ->
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() ->
+              ok
+      end,
+      fun() ->
+              rabbit_khepri:configure_snapshot_interval(409600000)
+      end).
+
+post_import() ->
+    rabbit_khepri:try_mnesia_or_khepri(
+      fun() ->
+              ok
+      end,
+      fun() ->
+              rabbit_khepri:configure_snapshot_interval(4096)
       end).
 
 %% Paths
