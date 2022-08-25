@@ -67,6 +67,11 @@ jobs:
         bazelisk run packaging/docker-image:rabbitmq \
           --config=buildbuddy
 
+    #! - name: Load RabbitMQ OCI
+    #!   run: |
+    #!     bazelisk run packaging/docker-image:rabbitmq \
+    #!       --config=buildbuddy
+
     - name: Configure Docker Network
       run: |
         docker network create ${DOCKER_NETWORK}
