@@ -18,7 +18,7 @@ describe("When a logged in user", function() {
     uaaLogin = new UAALoginPage(driver)
     overview = new OverviewPage(driver)
 
-    
+
   });
 
 
@@ -28,7 +28,7 @@ describe("When a logged in user", function() {
     await overview.isLoaded()
 
     await overview.logout()
-    await uaaLogin.isLoaded()
+    await homePage.isLoaded()
   });
 
 
@@ -36,6 +36,10 @@ describe("When a logged in user", function() {
    if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
     } else {
+      driver.takeScreenshot().then(
+        function (image) {
+            require('fs').writeFileSync('failed-logout.png', image, 'base64')
+        });
       driver.executeScript("lambda-status=failed");
     }
     driver.quit().then(function() {

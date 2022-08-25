@@ -33,3 +33,7 @@ run-remote-test: ## Run tests against a remote-setup
 	@(docker network inspect rabbitmq_net >/dev/null 2>&1 || docker network create rabbitmq_net)
 	@(echo "Running selenium tests ...")
 	@(docker run --rm  --name mocha --net rabbitmq_net --env RABBITMQ_URL=http://rabbitmq:15672 --env RUN_LOCAL=false --env SELENIUM_URL=http://selenium:4444/wd/hub -v ${PWD}/test:/code/test mocha-test /code/test/oauth/with-uaa/landing.js)
+
+run-local-test: ## Run tests against a remote-setup
+	#@(test/oauth/with-uaa/setup.sh)
+	@(RABBITMQ_URL=http://localhost:15672 RUN_LOCAL=true SCREENSHOTS_DIR=${PWD}/screens ./node_modules/.bin/mocha --timeout 30000 $(TEST))
