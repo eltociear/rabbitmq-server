@@ -45,7 +45,7 @@ module.exports = {
 
   takeAndSaveScreenshot: async (driver, name) => {
     let image = await driver.takeScreenshot();
-    let path = path.join("/screens", name + ".png");
-    await fsp.writeFile(path, image, 'base64');
+    let dest = path.join("/screens", name + ".png");
+    await fsp.writeFile(dest, image, 'base64');
   }
 };
