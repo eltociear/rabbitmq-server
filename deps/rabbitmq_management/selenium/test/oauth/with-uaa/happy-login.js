@@ -46,4 +46,4 @@ describe("An UAA user with administrator tag", function() {
     });
   });
 
-}).timeout(10000)
+})
