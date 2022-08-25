@@ -78,14 +78,15 @@ jobs:
 
     - name: Start RabbitMQ
       run: |
-        RABBITMQ_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/rabbitmq.config"
+        RABBITMQ_CONFIG_DIR="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa"
         ENABLED_PLUGINS="${PWD}/${SELENIUM_DIR}/bin/enabled_plugins"
         docker run \
           --detach \
-          --name local-rabbitmq \
+          --name rabbitmq \
           --net ${DOCKER_NETWORK} \
           -p 15672:15672 -p 5672:5672 \
-          -v ${RABBITMQ_CONFIG}:/etc/rabbitmq/rabbitmq.config:ro \
+          -v ${RABBITMQ_CONFIG_DIR}/logging.conf:/etc/rabbitmq/conf.d/logging.conf:ro \
+          -v ${RABBITMQ_CONFIG_DIR}/rabbitmq-remote.config:/etc/rabbitmq/rabbitmq.config:ro \
           -v ${ENABLED_PLUGINS}:/etc/rabbitmq/enabled_plugins \
           bazel/packaging/docker-image:rabbitmq
 
@@ -101,10 +102,10 @@ jobs:
 
     - name: Start UAA
       run: |
-        UAA_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa"
+        UAA_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa-remote"
         docker run \
           --detach \
-          --name local-uaa \
+          --name uaa \
           --net ${DOCKER_NETWORK} \
           --publish 8080:8080 \
           --mount "type=bind,source=${UAA_CONFIG},target=/uaa" \
@@ -131,8 +132,8 @@ jobs:
     - name: Save Logs
       if: always()
       run: |
-        docker logs local-rabbitmq > rabbitmq.log
-        docker logs local-uaa > uaa.log
+        docker logs rabbitmq > rabbitmq.log
+        docker logs uaa > uaa.log
         docker logs selenium > selenium.log
 
     - name: Upload Logs
