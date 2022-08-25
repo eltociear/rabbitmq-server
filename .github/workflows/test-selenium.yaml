@@ -2,7 +2,7 @@ name: Test Management UI with Selenium
 on:
   push:
     branches:
-    - pjk25/oidc-integration-github-action
+    - oidc-integration-github-action
 jobs:
   selenimum:
     runs-on: ubuntu-latest
@@ -150,7 +150,7 @@ jobs:
         docker logs uaa > logs/uaa.log
         docker logs selenium > logs/selenium.log
         cp $HOME/.npm/_logs/* logs
-        
+
     - name: Upload Test Artifacts
       if: always()
       uses: actions/upload-artifact@v3
