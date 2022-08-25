@@ -15,9 +15,9 @@ describe("An UAA user with administrator tag", function() {
   before(async function() {
     driver = buildDriver();
     await goToHome(driver);
-    homePage = new SSOHomePage(driver)
-    uaaLogin = new UAALoginPage(driver)
-    overview = new OverviewPage(driver)
+    homePage = new SSOHomePage(driver);
+    uaaLogin = new UAALoginPage(driver);
+    overview = new OverviewPage(driver);
   });
 
   it("can log in into the management ui", async function() {
@@ -27,18 +27,14 @@ describe("An UAA user with administrator tag", function() {
       throw new Error("Failed to login");
     }
     assert.equal(await overview.getUser(), "User rabbit_admin");
-
   });
 
-  after(function(done) {
-   if (this.currentTest.isPassed) {
+  after(async function() {
+    if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
     } else {
       driver.executeScript("lambda-status=failed");
     }
-    driver.quit().then(function() {
-      done();
-    });
+    await driver.quit();
   });
-
 })

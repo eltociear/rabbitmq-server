@@ -11,6 +11,5 @@ stop_uaa() {
   docker rm local-uaa
 }
 
-
 stop_rabbitmq
 stop_uaa

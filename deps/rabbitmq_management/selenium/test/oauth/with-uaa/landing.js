@@ -27,14 +27,12 @@ describe("Management UI with UAA running", function() {
     assert.ok(!visible);
   });
 
-  after(function(done) {
-   if (this.currentTest.isPassed) {
+  after(async function() {
+    if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
     } else {
       driver.executeScript("lambda-status=failed");
     }
-    driver.quit().then(function() {
-      done();
-    });
+    await driver.quit();
   });
 })

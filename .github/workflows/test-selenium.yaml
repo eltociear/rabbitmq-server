@@ -2,47 +2,159 @@ name: Test Management UI with Selenium
 on:
   push:
     branches:
-    - oidc-integration-github-action
+    - pjk25/oidc-integration-github-action
 jobs:
   selenimum:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        erlang_version:
+        - "24.3.4.3"
+        browser:
+        - chrome
+        include:
+        - erlang_version: "24.3.4.3"
+          elixir_version: 1.12.3
+    env:
+      SELENIUM_DIR: deps/rabbitmq_management/selenium
+      DOCKER_NETWORK: rabbitmq_net
     steps:
     - name: Checkout
       uses: actions/checkout@v3
-    -
-      name: Build mocha-test
+
+    - name: Configure OTP & Elixir
+      uses: erlef/setup-beam@v1.12
+      with:
+        otp-version: ${{ matrix.erlang_version }}
+        elixir-version: ${{ matrix.elixir_version }}
+
+    - name: Mount Bazel Cache
+      uses: actions/cache@v3.0.8
+      with:
+        path: "/home/runner/repo-cache/"
+        key: repo-cache
+
+    - name: Configure Bazel
       run: |
-        cd deps/rabbitmq_management/selenium
-        make init-tests
-        docker images | grep mocha-test
-    -
-      name: Call mocha-test
+        ERLANG_HOME="$(dirname $(dirname $(which erl)))"
+        ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
+        if [ -n "${{ secrets.BUILDBUDDY_API_KEY }}" ]; then
+        cat << EOF >> user.bazelrc
+          build:buildbuddy --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+        EOF
+        fi
+        cat << EOF >> user.bazelrc
+          build:buildbuddy --build_metadata=ROLE=CI
+          build:buildbuddy --build_metadata=VISIBILITY=PRIVATE
+          build:buildbuddy --repository_cache=/home/runner/repo-cache/
+          build:buildbuddy --color=yes
+          build:buildbuddy --disk_cache=
+
+          build:buildbuddy --remote_download_toplevel
+
+          build --@rules_erlang//:erlang_version=${{ matrix.erlang_version }}
+          build --@rules_erlang//:erlang_home=${ERLANG_HOME}
+          build --//:elixir_home=${ELIXIR_HOME}
+          build --platforms=//bazel/platforms:erlang_external_platform
+          build --extra_execution_platforms=//bazel/platforms:erlang_external_platform
+
+          build --@io_bazel_rules_docker//transitions:enable=false
+        EOF
+
+    - name: Build & Load RabbitMQ OCI
       run: |
-        
-        cd deps/rabbitmq_management/selenium
-        source bin/rabbitmq.sh
-        echo "running RabbitMQ..."
-        RABBITMQ_CONFIG=$PWD/test/oauth/with-uaa/rabbitmq.config start_rabbitmq
-        sleep 5
-        docker exec -it local-rabbitmq rabbitmqctl await_startup
-        make run-tests
+        bazelisk run packaging/docker-image:rabbitmq \
+          --config=buildbuddy
 
+    - name: Configure Docker Network
+      run: |
+        docker network create ${DOCKER_NETWORK}
 
-####
-# We need to run these as docker images:
-#  UAA
-#  RabbitMQ
-#  Selenium Tests (maybe these ones could run in the host machine)
-#  Selenium Hub (which runs the browser in silent mode)
+    - name: Start RabbitMQ
+      run: |
+        RABBITMQ_CONFIG_DIR="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa"
+        ENABLED_PLUGINS="${PWD}/${SELENIUM_DIR}/bin/enabled_plugins"
+        docker run \
+          --detach \
+          --name rabbitmq \
+          --net ${DOCKER_NETWORK} \
+          -p 15672:15672 -p 5672:5672 \
+          -v ${RABBITMQ_CONFIG_DIR}/logging.conf:/etc/rabbitmq/conf.d/logging.conf:ro \
+          -v ${RABBITMQ_CONFIG_DIR}/rabbitmq-remote.config:/etc/rabbitmq/rabbitmq.config:ro \
+          -v ${ENABLED_PLUGINS}:/etc/rabbitmq/enabled_plugins \
+          bazel/packaging/docker-image:rabbitmq
 
-# The workflow is more or less like this:
-# job:build-rabbitmq-image  -> job:build-test-runner-image -> job:run-tests
+    - name: Start Selenium
+      run: |
+        docker run \
+          --detach \
+          --name selenium \
+          --net ${DOCKER_NETWORK} \
+          -p 4444:4444 \
+          --shm-size=2g \
+          selenium/standalone-${{ matrix.browser }}:103.0
 
-# job:build-rabbitmq-image : Ideally, we do not want to push it. can we do that in github actions?
-#
-# job:run-tests : It runs within a container and it uses these services:
-#  - rabbitmq
-#  - UAA
-#  - selenium-hub
-# and it has this step which uses the image test-runner built by the job build-test-runner-image
+    - name: Start UAA
+      run: |
+        UAA_CONFIG="${PWD}/${SELENIUM_DIR}/test/oauth/with-uaa/uaa-remote"
+        docker run \
+          --detach \
+          --name uaa \
+          --net ${DOCKER_NETWORK} \
+          --publish 8080:8080 \
+          --mount "type=bind,source=${UAA_CONFIG},target=/uaa" \
+          --env UAA_CONFIG_PATH="/uaa" \
+          --env JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom" \
+          cloudfoundry/uaa:75.21.0
+
+    - name: Build Test Runner Image
+      run: |
+        cd ${SELENIUM_DIR}
+        docker build -t mocha-test --target test .
+
+    - name: Wait for UAA to be Up
+      run: |
+        ax_retry=5
+        counter=0
+        until curl localhost:8080/.well-known/openid-configuration
+        do
+          sleep 5
+          [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
+          echo "Trying again. Try #$counter"
+          ((counter++))
+        done
+
+    - name: Run Tests
+      run: |
+        TEST_DIR="${PWD}/${SELENIUM_DIR}/test"
+        docker run \
+          --rm \
+          --name mocha \
+          --net ${DOCKER_NETWORK} \
+          --env RABBITMQ_URL=http://rabbitmq:15672 \
+          --env RUN_LOCAL=false \
+          -v ${TEST_DIR}:/code/test \
+          -v ${PWD}/screens:/screens \
+          mocha-test /code/test/oauth/with-uaa
+
+    #! - name: Setup tmate session
+    #!   uses: mxschmitt/action-tmate@v3
+    #!   if: always()
+
+    - name: Save Logs
+      if: always()
+      run: |
+        mkdir logs
+        docker logs rabbitmq > logs/rabbitmq.log
+        docker logs uaa > logs/uaa.log
+        docker logs selenium > logs/selenium.log
+
+    - name: Upload Test Artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-artifacts-${{ matrix.browser }}-${{ matrix.erlang_version }}
+        path: |
+          logs/*
+          screens/*
