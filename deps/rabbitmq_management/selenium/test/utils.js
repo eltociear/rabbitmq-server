@@ -11,7 +11,7 @@ if (!process.env.RABBITMQ_URL) {
   baseUrl = "http://localhost:15672";
 }
 if (!process.env.SELENIUM_URL) {
-  seleniumUrl = "http://selenium:4444/wd/hub";
+  seleniumUrl = "http://selenium:4444";
 }
 
 module.exports = {
