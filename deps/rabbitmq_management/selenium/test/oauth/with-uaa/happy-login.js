@@ -31,9 +31,9 @@ describe("An UAA user with administrator tag", function() {
 
   after(async function() {
     if (this.currentTest.isPassed) {
-      await driver.executeScript("lambda-status=passed");
+      driver.executeScript("lambda-status=passed");
     } else {
-      await driver.executeScript("lambda-status=failed");
+      driver.executeScript("lambda-status=failed");
     }
     await driver.quit();
   });
