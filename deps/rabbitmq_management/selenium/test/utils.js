@@ -23,7 +23,7 @@ module.exports = {
     if (!runLocal) {
       console.log("RUN_REMOTE");
       builder = builder.usingServer(seleniumUrl).forBrowser('chrome');
-    }else {
+    } else {
       console.log("RUN_LOCAL");
       builder = builder.forBrowser('chrome');
     }
