@@ -32,7 +32,7 @@ describe("An UAA user with administrator tag", function() {
 
   });
 
-  after(function(done) {
+  after(async function(done) {
     await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterAll');
     if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
