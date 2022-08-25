@@ -34,16 +34,13 @@ describe("An UAA user with administrator tag", function() {
 
   });
 
-  after(async function(done) {
-    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterAll');
+  after(async function() {
     if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
     } else {
       driver.executeScript("lambda-status=failed");
     }
-    driver.quit().then(function() {
-      done();
-    });
+    await driver.quit();
   });
 
 })

@@ -24,23 +24,25 @@ describe("When a logged in user", function() {
 
   it("logs out", async function() {
     await homePage.clickToLogin();
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'beforeLogin');
     await uaaLogin.login("rabbit_admin", "rabbit_admin");
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterLogin');
     await overview.isLoaded()
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'overview');
 
     await overview.logout()
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterLogout');
     await uaaLogin.isLoaded()
   });
 
 
-  after(function(done) {
+  after(async function() {
    if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
     } else {    
       driver.executeScript("lambda-status=failed");
     }
-    driver.quit().then(function() {
-      done();
-    });
+    await driver.quit();
   });
 
 })
