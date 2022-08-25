@@ -118,6 +118,18 @@ jobs:
         cd ${SELENIUM_DIR}
         docker build -t mocha-test --target test .
 
+    - name: Wait for UAA to be Up
+      run: |
+        ax_retry=5
+        counter=0
+        until curl localhost:8080/.well-known/openid-configuration
+        do
+          sleep 5
+          [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
+          echo "Trying again. Try #$counter"
+          ((counter++))
+        done
+
     - name: Run Tests
       run: |
         TEST_DIR="${PWD}/${SELENIUM_DIR}/test"
@@ -130,6 +142,10 @@ jobs:
           -v ${TEST_DIR}:/code/test \
           -v ${PWD}/screens:/screens \
           mocha-test /code/test/oauth/with-uaa
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: always()
 
     - name: Save Logs
       if: always()
