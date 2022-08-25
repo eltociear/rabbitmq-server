@@ -108,8 +108,8 @@ jobs:
           --net ${DOCKER_NETWORK} \
           --publish 8080:8080 \
           --mount "type=bind,source=${UAA_CONFIG},target=/uaa" \
-      		--env UAA_CONFIG_PATH="/uaa" \
-      		--env JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom" \
+          --env UAA_CONFIG_PATH="/uaa" \
+          --env JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom" \
           cloudfoundry/uaa:75.21.0
 
     - name: Build Test Runner Image
