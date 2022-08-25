@@ -17,21 +17,19 @@ describe("When a logged in user", function() {
     homePage = new SSOHomePage(driver)
     uaaLogin = new UAALoginPage(driver)
     overview = new OverviewPage(driver)
-
-
   });
 
 
   it("logs out", async function() {
     await homePage.clickToLogin();
-    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'beforeLogin');
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), '01-beforeLogin');
     await uaaLogin.login("rabbit_admin", "rabbit_admin");
-    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterLogin');
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), '02-afterLogin');
     await overview.isLoaded()
-    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'overview');
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), '03-overview');
 
     await overview.logout()
-    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterLogout');
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), '04-afterLogout');
     await uaaLogin.isLoaded()
   });
 
