@@ -37,15 +37,12 @@ describe("Once user is logged in", function() {
 
   });
 
-  after(function(done) {
-   if (this.currentTest.isPassed) {
-      driver.executeScript("lambda-status=passed");
+  after(async function() {
+    if (this.currentTest.isPassed) {
+      await driver.executeScript("lambda-status=passed");
     } else {
-      driver.executeScript("lambda-status=failed");
+      await driver.executeScript("lambda-status=failed");
     }
-    driver.quit().then(function() {
-      done();
-    });
+    await driver.quit();
   });
-
 })

@@ -19,7 +19,6 @@ describe("When a logged in user", function() {
     overview = new OverviewPage(driver)
   });
 
-
   it("logs out", async function() {
     await homePage.clickToLogin();
     await takeAndSaveScreenshot(driver, require('path').basename(__filename), '01-beforeLogin');
@@ -33,14 +32,12 @@ describe("When a logged in user", function() {
     await uaaLogin.isLoaded()
   });
 
-
   after(async function() {
-   if (this.currentTest.isPassed) {
-      driver.executeScript("lambda-status=passed");
-    } else {    
-      driver.executeScript("lambda-status=failed");
+    if (this.currentTest.isPassed) {
+      await driver.executeScript("lambda-status=passed");
+    } else {
+      await driver.executeScript("lambda-status=failed");
     }
     await driver.quit();
   });
-
 })

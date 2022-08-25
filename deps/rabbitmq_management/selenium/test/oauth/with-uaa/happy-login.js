@@ -27,16 +27,14 @@ describe("An UAA user with administrator tag", function() {
       throw new Error("Failed to login");
     }
     assert.equal(await overview.getUser(), "User rabbit_admin");
-
   });
 
   after(async function() {
     if (this.currentTest.isPassed) {
-      driver.executeScript("lambda-status=passed");
+      await driver.executeScript("lambda-status=passed");
     } else {
-      driver.executeScript("lambda-status=failed");
+      await driver.executeScript("lambda-status=failed");
     }
     await driver.quit();
   });
-
 })
