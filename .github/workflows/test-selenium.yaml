@@ -128,6 +128,7 @@ jobs:
           --env RABBITMQ_URL=http://rabbitmq:15672 \
           --env RUN_LOCAL=false \
           -v ${TEST_DIR}:/code/test \
+          -v ${PWD}/screens:/screens \
           mocha-test /code/test/oauth/with-uaa
 
     - name: Save Logs
@@ -142,4 +143,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: logs
-        path: "*.log"
+        path: |
+          *.log
+          screens/*

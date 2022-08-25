@@ -39,5 +39,13 @@ module.exports = {
     return new Promise(resolve => {
       setTimeout(resolve, msec, ref);
     })
+  },
+
+  takeAndSaveScreenshot: async (driver, name) => {
+    image = await driver.takeScreenshot();
+    path = "/screens/" + name + ".png"
+    require('fs').writeFile(path, image, 'base64', function(err) {
+        console.log(err);
+    });
   }
 };
