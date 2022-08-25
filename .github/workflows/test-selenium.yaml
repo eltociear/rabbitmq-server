@@ -143,9 +143,9 @@ jobs:
           -v ${PWD}/screens:/screens \
           mocha-test /code/test/oauth/with-uaa
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: always()
+    #! - name: Setup tmate session
+    #!   uses: mxschmitt/action-tmate@v3
+    #!   if: always()
 
     - name: Save Logs
       if: always()

@@ -1,7 +1,7 @@
 const {By,Key,until,Builder} = require("selenium-webdriver");
 require("chromedriver");
 var assert = require('assert');
-const {buildDriver, goToHome} = require("../../utils");
+const {buildDriver, goToHome, takeAndSaveScreenshot} = require("../../utils");
 
 var SSOHomePage = require('../../pageobjects/SSOHomePage')
 
@@ -17,6 +17,7 @@ describe("Management UI with UAA running", function() {
 
   it("should have a login button to SSO", async function() {
     await homePage.isLoaded();
+    await takeAndSaveScreenshot(driver, 'homePageLoaded');
     let value = await homePage.getLoginButton()
     assert.equal(value, "Click here to log in");
   });
