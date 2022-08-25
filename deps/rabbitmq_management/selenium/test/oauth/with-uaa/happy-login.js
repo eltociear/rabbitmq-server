@@ -14,17 +14,16 @@ describe("An UAA user with administrator tag", function() {
 
   before(async function() {
     driver = buildDriver();
-    await takeAndSaveScreenshot(driver, 'afterDriverBuilt');
     await goToHome(driver);
-    await takeAndSaveScreenshot(driver, 'afterGoToHome');
     homePage = new SSOHomePage(driver);
     uaaLogin = new UAALoginPage(driver);
     overview = new OverviewPage(driver);
   });
 
   it("can log in into the management ui", async function() {
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterGoToHome');
     await homePage.clickToLogin();
-    await takeAndSaveScreenshot(driver, 'afterHomePageClick');
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterHomePageClick');
     await uaaLogin.login("rabbit_admin", "rabbit_admin");
     if (! await overview.isLoaded()) {
       throw new Error("Failed to login");
@@ -34,7 +33,8 @@ describe("An UAA user with administrator tag", function() {
   });
 
   after(function(done) {
-   if (this.currentTest.isPassed) {
+    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'afterAll');
+    if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
     } else {
       driver.executeScript("lambda-status=failed");

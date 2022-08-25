@@ -67,11 +67,6 @@ jobs:
         bazelisk run packaging/docker-image:rabbitmq \
           --config=buildbuddy
 
-    #! - name: Load RabbitMQ OCI
-    #!   run: |
-    #!     bazelisk run packaging/docker-image:rabbitmq \
-    #!       --config=buildbuddy
-
     - name: Configure Docker Network
       run: |
         docker network create ${DOCKER_NETWORK}
@@ -98,7 +93,7 @@ jobs:
           --net ${DOCKER_NETWORK} \
           -p 4444:4444 \
           --shm-size=2g \
-          selenium/standalone-chrome:103.0
+          selenium/standalone-${{ matrix.browser }}:103.0
 
     - name: Start UAA
       run: |
@@ -150,15 +145,16 @@ jobs:
     - name: Save Logs
       if: always()
       run: |
-        docker logs rabbitmq > rabbitmq.log
-        docker logs uaa > uaa.log
-        docker logs selenium > selenium.log
+        mkdir logs
+        docker logs rabbitmq > logs/rabbitmq.log
+        docker logs uaa > logs/uaa.log
+        docker logs selenium > logs/selenium.log
 
-    - name: Upload Logs
+    - name: Upload Test Artifacts
       if: always()
       uses: actions/upload-artifact@v3
       with:
-        name: logs
+        name: test-artifacts-${{ matrix.browser }}-${{ matrix.erlang_version }}
         path: |
-          *.log
+          logs/*
           screens/*

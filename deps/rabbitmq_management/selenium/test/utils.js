@@ -1,4 +1,5 @@
-const fsp = require('fs').promises
+const fs = require('fs')
+const fsp = fs.promises
 const path = require('path');
 const {By,Key,until,Builder} = require("selenium-webdriver");
 require("chromedriver");
@@ -43,9 +44,13 @@ module.exports = {
     })
   },
 
-  takeAndSaveScreenshot: async (driver, name) => {
+  takeAndSaveScreenshot: async (driver, dir, name) => {
     let image = await driver.takeScreenshot();
-    let dest = path.join("/screens", name + ".png");
+    let absdir = path.join("/screens", dir);
+    if (!fs.existsSync(absdir)) {
+      await fsp.mkdir(absdir);
+    }
+    let dest = path.join(absdir, name + ".png");
     await fsp.writeFile(dest, image, 'base64');
   }
 };
