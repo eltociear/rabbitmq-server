@@ -28,18 +28,14 @@ describe("When a logged in user", function() {
     await overview.isLoaded()
 
     await overview.logout()
-    await homePage.isLoaded()
+    await uaaLogin.isLoaded()
   });
 
 
   after(function(done) {
    if (this.currentTest.isPassed) {
       driver.executeScript("lambda-status=passed");
-    } else {
-      driver.takeScreenshot().then(
-        function (image) {
-            require('fs').writeFileSync('failed-logout.png', image, 'base64')
-        });
+    } else {    
       driver.executeScript("lambda-status=failed");
     }
     driver.quit().then(function() {
