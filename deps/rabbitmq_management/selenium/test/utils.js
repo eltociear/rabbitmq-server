@@ -24,6 +24,7 @@ module.exports = {
       builder = builder.forBrowser('chrome');
     }
     driver = builder.build();
+    driver.manage().timeouts().setScriptTimeout(10, TimeUnit.SECONDS);
     return driver;
   },
 
