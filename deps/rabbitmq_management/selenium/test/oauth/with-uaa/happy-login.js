@@ -14,7 +14,7 @@ describe("An UAA user with administrator tag", function() {
 
   before(async function() {
     driver = buildDriver();
-    await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'beforeAll');
+    // await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'beforeAll');
     await goToHome(driver);
     await takeAndSaveScreenshot(driver, require('path').basename(__filename), 'beforeAll2');
     homePage = new SSOHomePage(driver);
