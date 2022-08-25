@@ -129,7 +129,6 @@ jobs:
         docker logs local-rabbitmq > rabbitmq.log
         docker logs local-uaa > uaa.log
         docker logs selenium > selenium.log
-        docker logs mocha > mocha.log
 
     - name: Upload Logs
       if: always()
