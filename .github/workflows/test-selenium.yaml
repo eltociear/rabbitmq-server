@@ -125,9 +125,10 @@ jobs:
           --rm \
           --name mocha \
           --net ${DOCKER_NETWORK} \
-          --env RABBITMQ_URL=http://local-rabbitmq:15672 \
+          --env RABBITMQ_URL=http://rabbitmq:15672 \
           --env RUN_LOCAL=false \
-          -v ${TEST_DIR}:/code/test mocha-test /code/test/oauth/with-uaa
+          -v ${TEST_DIR}:/code/test \
+          mocha-test /code/test/oauth/with-uaa
 
     - name: Save Logs
       if: always()
