@@ -122,3 +122,17 @@ jobs:
           --env RABBITMQ_URL=http://local-rabbitmq:15672 \
           --env RUN_LOCAL=false \
           -v ${TEST_DIR}:/code/test mocha-test /code/test/oauth/with-uaa
+
+    - name: Save Logs
+      if: always()
+      run: |
+        docker logs local-rabbitmq > rabbitmq.log
+        docker logs local-uaa > uaa.log
+        docker logs selenium > selenium.log
+
+    - name: Upload Logs
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: logs
+        path: "*.log"
