@@ -11,7 +11,7 @@ describe("Once user is logged in", function() {
   var homePage;
   var uaaLogin;
   var overview;
-  this.timeout(25000); 
+  this.timeout(25000); // hard-coded to 25secs because this test requires 25sec to run 
 
   before(async function() {
     driver = buildDriver();

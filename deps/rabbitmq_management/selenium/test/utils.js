@@ -12,19 +12,11 @@ var screenshotsDir = process.env.SCREENSHOTS_DIR || "/screens";
 
 module.exports = {
   buildDriver: (caps) => {
-    console.log("RABBITMQ_URL: " + baseUrl);
-
-    console.log("SELENIUM_URL: " + seleniumUrl);
     builder = new Builder();
     if (!runLocal) {
-      console.log("RUN_REMOTE");
-      builder = builder.usingServer(seleniumUrl).forBrowser('chrome');
-    } else {
-      console.log("RUN_LOCAL");
-      builder = builder.forBrowser('chrome');
+      builder = builder.usingServer(seleniumUrl);
     }
-    driver = builder.build();
-    return driver;
+    return builder.forBrowser('chrome').build();
   },
 
   goToHome: (driver) => {
