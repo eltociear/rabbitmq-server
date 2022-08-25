@@ -159,6 +159,6 @@ oauth:
       authorized-grant-types: client_credentials
     consumer_with_roles:
       id: consumer_with_roles
-ç      secret: consumer_with_roles_secret
+      secret: consumer_with_roles_secret
       authorities: rabbitmq.* api://rabbitmq:Read.All api://rabbitmq:Configure.All api://rabbitmq:Write.All
       authorized-grant-types: client_credentials
