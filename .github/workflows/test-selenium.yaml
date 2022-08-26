@@ -149,7 +149,7 @@ jobs:
         docker logs rabbitmq > logs/rabbitmq.log
         docker logs uaa > logs/uaa.log
         docker logs selenium > logs/selenium.log
-        cp $HOME/.npm/_logs/* logs
+        
 
     - name: Upload Test Artifacts
       if: always()
