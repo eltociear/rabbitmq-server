@@ -115,17 +115,10 @@ jobs:
 
     - name: Wait for UAA to be Up
       run: |
-        ax_retry=5
-        counter=0
-        until curl localhost:8080/.well-known/openid-configuration
-        do
-          sleep 5
-          [[ counter -eq $max_retry ]] && echo "Failed!" && exit 1
-          echo "Trying again. Try #$counter"
-          ((counter++))
-        done
+        cd ${PWD}/${SELENIUM_DIR}
+        make wait-for-uaa
 
-    - name: Run Tests
+    - name: Run Suite Test oauth/with-uaa
       run: |
         TEST_DIR="${PWD}/${SELENIUM_DIR}/test"
         docker run \
@@ -138,6 +131,20 @@ jobs:
           -v ${PWD}/screens:/screens \
           mocha-test /code/test/oauth/with-uaa
 
+    - name: Run Suite Test oauth/with-uaa-down
+      run: |
+        docker kill uaa && docker rm uaa
+        TEST_DIR="${PWD}/${SELENIUM_DIR}/test"
+        docker run \
+          --rm \
+          --name mocha \
+          --net ${DOCKER_NETWORK} \
+          --env RABBITMQ_URL=http://rabbitmq:15672 \
+          --env RUN_LOCAL=false \
+          -v ${TEST_DIR}:/code/test \
+          -v ${PWD}/screens:/screens \
+          mocha-test /code/test/oauth/with-uaa-down
+
     #! - name: Setup tmate session
     #!   uses: mxschmitt/action-tmate@v3
     #!   if: always()
@@ -149,7 +156,7 @@ jobs:
         docker logs rabbitmq > logs/rabbitmq.log
         docker logs uaa > logs/uaa.log
         docker logs selenium > logs/selenium.log
-        
+
 
     - name: Upload Test Artifacts
       if: always()

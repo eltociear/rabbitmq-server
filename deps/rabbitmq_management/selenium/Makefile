@@ -28,6 +28,9 @@ run-chrome: ## Install Selenium Chrome
 build-test-runner-image: ## Prepare docker image to run tests
 	@(docker build -t mocha-test  --target test .)
 
+stop-uaa: ## Stop uaa
+	@(docker kill uaa && docker rm uaa)
+
 local-setup: ## Deploy RAbbitMQ and UAA to run the test locally using localhost
 	@(test/oauth/with-uaa/setup.sh)
 

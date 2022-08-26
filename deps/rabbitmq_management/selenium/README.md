@@ -41,7 +41,7 @@ make run-local-test TEST_ARGS=test/oauth/with-uaa/landing.js
 ```
 > By default, if we do not specify any TEST_ARGS, it uses `test/oauth/with-uaa`
 
-# Run existing tests against local browser
+# Run tests in headless-mode locally
 
 Launch **Selenium Hub** which is where the headless chrome browser runs:
 ```
@@ -63,3 +63,13 @@ To run all tests under `test/oauth/with-uaa` invoke the following command:
 make run-remote-test TEST_ARGS=test/oauth/with-uaa
 ```
 > By default, if we do not specify any TEST_ARGS, it uses `test/oauth/with-uaa`
+
+
+At the moment there are only 2 groups of tests. The first one is `oauth/with-uaa` that we just discussed above.
+The second one is `oauth/with-uaa-down` which runs a test case with UAA down.
+To run this suite, we need to shutdown UAA.
+
+```
+make stop-uaa
+make run-remote-test TEST_ARGS=test/oauth/with-uaa-down
+```
