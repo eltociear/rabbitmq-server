@@ -7,8 +7,8 @@ export RABBITMQ_CONFIG=${SCRIPT}/rabbitmq.config
 . $SCRIPT/../../../bin/rabbitmq.sh
 
 stop_uaa() {
-  docker kill local-uaa
-  docker rm local-uaa
+  docker kill uaa
+  docker rm uaa
 }
 
 stop_rabbitmq
