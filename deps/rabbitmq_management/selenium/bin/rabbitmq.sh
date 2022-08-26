@@ -20,6 +20,6 @@ start_rabbitmq() {
 }
 
 stop_rabbitmq() {
-  docker kill local-rabbitmq
-  docker rm local-rabbitmq
+  docker kill rabbitmq
+  docker rm rabbitmq
 }
