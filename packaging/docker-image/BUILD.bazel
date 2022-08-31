@@ -120,10 +120,9 @@ container_image(
     ],
     tags = ["manual"],
     tars = select({
-        "@rules_erlang//platforms:erlang_23": ["@otp_src_23//file"],
-        "@rules_erlang//platforms:erlang_24": ["@otp_src_24//file"],
-        "@rules_erlang//platforms:erlang_25": ["@otp_src_25//file"],
-        "@rules_erlang//platforms:erlang_external": ["@otp_src_25//file"],
+        "@erlang_config//:erlang_23": ["@otp_src_23//file"],
+        "@erlang_config//:erlang_24": ["@otp_src_24//file"],
+        "@erlang_config//:erlang_25": ["@otp_src_25//file"],
     }),
 )
 

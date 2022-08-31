@@ -32,19 +32,18 @@ build:rbe --host_cpu=k8
 build:rbe --cpu=k8
 
 build:rbe-23 --config=rbe
-build:rbe-23 --platforms=//bazel/platforms:erlang_23_platform
-build:rbe-23 --extra_execution_platforms=//bazel/platforms:erlang_23_platform
+build:rbe-23 --platforms=//bazel/platforms:erlang_23_internal
+build:rbe-23 --extra_execution_platforms=//bazel/platforms:erlang_23_internal
 
 build:rbe-24 --config=rbe
-build:rbe-24 --platforms=//bazel/platforms:erlang_24_platform
-build:rbe-24 --extra_execution_platforms=//bazel/platforms:erlang_24_platform
+build:rbe-24 --platforms=//bazel/platforms:erlang_24_internal
+build:rbe-24 --extra_execution_platforms=//bazel/platforms:erlang_24_internal
 
 build:rbe-25 --config=rbe
-build:rbe-25 --platforms=//bazel/platforms:erlang_25_platform
-build:rbe-25 --extra_execution_platforms=//bazel/platforms:erlang_25_platform
+build:rbe-25 --platforms=//bazel/platforms:erlang_25_internal
+build:rbe-25 --extra_execution_platforms=//bazel/platforms:erlang_25_internal
 
-build:local --platforms=//bazel/platforms:erlang_external_platform
-build:local --extra_execution_platforms=//bazel/platforms:erlang_external_platform
+build:local --platforms=@erlang_config//:erlang_any_external
 
 # Try importing a user specific .bazelrc
 # You can create your own by copying and editing the template-user.bazelrc template:

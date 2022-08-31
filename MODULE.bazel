@@ -28,6 +28,12 @@ bazel_dep(
     version = "3.5.0",
 )
 
+git_override(
+    module_name = "rules_erlang",
+    remote = "https://github.com/rabbitmq/rules_erlang.git",
+    commit = "85000185fad6edb7c523e30d52d5ffa46b1ae81d",
+)
+
 erlang_package = use_extension(
     "@rules_erlang//bzlmod:extensions.bzl",
     "erlang_package",
@@ -165,14 +171,8 @@ erlang_package.hex_package(
 
 erlang_package.git_package(
     repository = "rabbitmq/osiris",
-    branch = "main",
+    tag = "v1.3.0",
     patch_cmds = [
-        """VERSION=$(git rev-parse HEAD)
-echo "Injecting ${VERSION} into Makefile..."
-sed -i"_orig" -E '/PROJECT_VERSION/ s/[0-9]+\\.[0-9]+\\.[0-9]+/'${VERSION}'/' Makefile
-echo "Injecting ${VERSION} into BUILD.bazel..."
-sed -i"_orig" -E '/VERSION/ s/[0-9]+\\.[0-9]+\\.[0-9]+/'${VERSION}'/' BUILD.bazel
-""",
         """sed -i"_orig2" -E 's/ct_sharded\\.bzl/ct.bzl/' BUILD.bazel
 """,
     ],

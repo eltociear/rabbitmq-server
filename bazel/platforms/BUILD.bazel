@@ -2,18 +2,8 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-constraint_value(
-    name = "erlang_git_master",
-    constraint_setting = "@rules_erlang//platforms:erlang_major_version",
-)
-
 constraint_setting(
     name = "elixir_version",
-)
-
-constraint_value(
-    name = "elixir_external",
-    constraint_setting = ":elixir_version",
 )
 
 constraint_value(
@@ -32,45 +22,40 @@ constraint_value(
 )
 
 platform(
-    name = "erlang_external_platform",
+    name = "erlang_23_internal",
     constraint_values = [
-        "@rules_erlang//platforms:erlang_external",
-        ":elixir_external",
-    ],
-    parents = ["@local_config_platform//:host"],
-)
-
-platform(
-    name = "erlang_23_platform",
-    constraint_values = [
-        "@rules_erlang//platforms:erlang_23",
+        "@erlang_config//:erlang_internal",
+        "@erlang_config//:erlang_23",
         ":elixir_1_10",
     ],
     parents = ["@rbe//config:platform"],
 )
 
 platform(
-    name = "erlang_24_platform",
+    name = "erlang_24_internal",
     constraint_values = [
-        "@rules_erlang//platforms:erlang_24",
+        "@erlang_config//:erlang_internal",
+        "@erlang_config//:erlang_24",
         ":elixir_1_12",
     ],
     parents = ["@rbe//config:platform"],
 )
 
 platform(
-    name = "erlang_25_platform",
+    name = "erlang_25_internal",
     constraint_values = [
-        "@rules_erlang//platforms:erlang_25",
+        "@erlang_config//:erlang_internal",
+        "@erlang_config//:erlang_25",
         ":elixir_1_13",
     ],
     parents = ["@rbe//config:platform"],
 )
 
 platform(
-    name = "erlang_git_master_platform",
+    name = "erlang_git_master_internal",
     constraint_values = [
-        ":erlang_git_master",
+        "@erlang_config//:erlang_internal",
+        "@erlang_config//:erlang_git_master",
         ":elixir_1_13",
     ],
     parents = ["@rbe//config:platform"],
