@@ -218,8 +218,6 @@ jobs:
             build --@rules_erlang//:erlang_version=${{ matrix.otp_major }}
             build --@rules_erlang//:erlang_home=${ERLANG_HOME}
             build --//:elixir_home=${ELIXIR_HOME}
-            build --platforms=//bazel/platforms:erlang_external_platform
-            build --extra_execution_platforms=//bazel/platforms:erlang_external_platform
           EOF
 
       - name: Set the correct erlang source tar for the container
@@ -233,23 +231,17 @@ jobs:
 
       - name: Build
         run: |
-          ERLANG_HOME="$(dirname $(dirname $(which erl)))"
-          ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
           bazelisk build //packaging/docker-image:rabbitmq \
             --config=buildbuddy
 
       - name: Test
         run: |
-          ERLANG_HOME="$(dirname $(dirname $(which erl)))"
-          ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
           OCI_TESTS=$(bazel query 'tests(//packaging/docker-image/...)')
           bazelisk test ${OCI_TESTS} \
             --config=buildbuddy
 
       - name: Load
         run: |
-          ERLANG_HOME="$(dirname $(dirname $(which erl)))"
-          ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
           bazelisk run //packaging/docker-image:rabbitmq \
             --config=buildbuddy
 
