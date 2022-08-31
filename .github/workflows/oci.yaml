@@ -218,14 +218,10 @@ jobs:
             build --//:elixir_home=${ELIXIR_HOME}
           EOF
 
-      - name: Set the correct erlang source tar for the container
-        run: |
-          sudo npm install --global --silent @bazel/buildozer
-
-          buildozer 'set tars ["@otp_src_${{ matrix.otp_major }}//file"]' \
-            //packaging/docker-image:otp_source
-
-          git diff
+          cat bazel-rabbitmq-server/external/erlang_config/external/BUILD.bazel || echo "not found"
+          # clean so that @erlang_config regenerates with the correct erlang version
+          bazelisk clean
+          cat bazel-rabbitmq-server/external/erlang_config/external/BUILD.bazel || echo "not found"
 
       - name: Build
         run: |
