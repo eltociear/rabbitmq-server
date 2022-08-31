@@ -212,11 +212,9 @@ jobs:
 
       - name: Further Configure Bazel
         run: |
-          ERLANG_HOME="$(dirname $(dirname $(which erl)))"
           ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
           cat << EOF >> user.bazelrc
             build --@rules_erlang//:erlang_version=${{ matrix.otp_major }}
-            build --@rules_erlang//:erlang_home=${ERLANG_HOME}
             build --//:elixir_home=${ELIXIR_HOME}
           EOF
 
