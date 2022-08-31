@@ -212,6 +212,8 @@ jobs:
 
       - name: Further Configure Bazel
         run: |
+          export PATH="$(dirname $(which erl)):$PATH"
+
           ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
           cat << EOF >> user.bazelrc
             build --@rules_erlang//:erlang_version=${{ matrix.otp_major }}
@@ -225,6 +227,8 @@ jobs:
 
       - name: Build
         run: |
+          printenv PATH
+
           bazelisk build //packaging/docker-image:rabbitmq \
             --config=buildbuddy
 
