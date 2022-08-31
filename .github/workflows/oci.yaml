@@ -224,6 +224,7 @@ jobs:
           # clean so that @erlang_config regenerates with the correct erlang version
           bazelisk clean
           cat bazel-rabbitmq-server/external/erlang_config/external/BUILD.bazel || echo "not found"
+          bazel query '@erlang_config//external:otp' --output=build
 
       - name: Build
         run: |
