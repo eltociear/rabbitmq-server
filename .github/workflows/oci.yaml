@@ -215,10 +215,17 @@ jobs:
           ERLANG_HOME="$(dirname $(dirname $(which erl)))"
           ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
           cat << EOF >> user.bazelrc
-            build --@rules_erlang//:erlang_version=${{ matrix.otp_major }}
-            build --@rules_erlang//:erlang_home=${ERLANG_HOME}
-            build --//:elixir_home=${ELIXIR_HOME}
+            build --erlang_version=${{ matrix.otp_major }}
+            build --erlang_home=${ERLANG_HOME}
+            build --elixir_home=${ELIXIR_HOME}
           EOF
+
+      - name: Set the correct erlang source tar for the container
+        run: |
+          sudo npm install --global --silent @bazel/buildozer
+          buildozer 'set tars ["@otp_src_${{ matrix.otp_major }}//file"]' \
+            //packaging/docker-image:otp_source
+          git diff
 
       - name: Build
         run: |

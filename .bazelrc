@@ -4,6 +4,10 @@ build --registry=https://raw.githubusercontent.com/rabbitmq/bazel-central-regist
 build --incompatible_strict_action_env
 build --local_test_jobs=1
 
+build --flag_alias=erlang_home=@rules_erlang//:erlang_home
+build --flag_alias=erlang_version=@rules_erlang//:erlang_version
+build --flag_alias=elixir_home=//:elixir_home
+
 build:buildbuddy --bes_results_url=https://app.buildbuddy.io/invocation/
 build:buildbuddy --bes_backend=grpcs://remote.buildbuddy.io
 build:buildbuddy --remote_cache=grpcs://remote.buildbuddy.io
