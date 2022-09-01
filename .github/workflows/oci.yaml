@@ -177,31 +177,8 @@ jobs:
           path: "/home/runner/repo-cache/"
           key: repo-cache
 
-      - name: Check OTP/Elixir versions used in RBE
-        id: load-info
-        run: |
-          sudo npm install --global --silent @bazel/buildozer
-
-          OTP_VERSION="$(bazel query '@erlang_config//${{ matrix.otp_major }}:otp' --output=build | buildozer 'print version' -:otp)"
-
-          CONSTRAINTS="$(buildozer 'print constraint_values' //bazel/platforms:erlang_24_internal)"
-          ELIXIR_REF=${CONSTRAINTS#*elixir_}
-          ELIXIR_REF=${ELIXIR_REF%]}
-          PREFIX=$(bazel query //bazel/toolchains:elixir_build_${ELIXIR_REF} --output=build | buildozer 'print strip_prefix' -:%elixir_build)
-
-          echo "::set-output name=otp::${OTP_VERSION}"
-          echo "::set-output name=elixir::${PREFIX#elixir-}"
-
-      - name: Configure OTP & Elixir
-        uses: erlef/setup-beam@v1.12
-        with:
-          otp-version: ${{ steps.load-info.outputs.otp }}
-          elixir-version: ${{ steps.load-info.outputs.elixir }}
-
       - name: Configure Bazel
         run: |
-          ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
-
           if [ -n "${{ secrets.BUILDBUDDY_API_KEY }}" ]; then
           cat << EOF >> user.bazelrc
             build:buildbuddy --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
@@ -217,16 +194,42 @@ jobs:
             build:buildbuddy --remote_download_toplevel
 
             build --@io_bazel_rules_docker//transitions:enable=false
+          EOF
 
+      - name: Check OTP/Elixir versions used in RBE
+        id: load-info
+        run: |
+          bazelisk build :otp_version :elixir_version \
+            --config=rbe-${{ matrix.otp_major }}
+          echo "::set-output name=otp::$(cat bazel-bin/otp_version.txt)"
+          echo "::set-output name=elixir::$(cat bazel-bin/elixir_version.txt)"
+
+      - name: Configure OTP & Elixir
+        uses: erlef/setup-beam@v1.12
+        with:
+          otp-version: ${{ steps.load-info.outputs.otp }}
+          elixir-version: ${{ steps.load-info.outputs.elixir }}
+
+      - name: Further Configure Bazel
+        run: |
+          export PATH="$(dirname $(which erl)):$PATH"
+
+          ELIXIR_HOME="$(dirname $(dirname $(which iex)))"
+          cat << EOF >> user.bazelrc
             build --@rules_erlang//:erlang_version=${{ matrix.otp_major }}
             build --//:elixir_home=${ELIXIR_HOME}
           EOF
 
-          bazel clean --expunge
+          cat bazel-rabbitmq-server/external/erlang_config/external/BUILD.bazel || echo "not found"
+          # clean so that @erlang_config regenerates with the correct erlang version
+          bazelisk clean
+          cat bazel-rabbitmq-server/external/erlang_config/external/BUILD.bazel || echo "not found"
           bazel query '@erlang_config//external:otp' --output=build
 
       - name: Build
         run: |
+          printenv PATH
+
           bazelisk build //packaging/docker-image:rabbitmq \
             --config=buildbuddy
 
