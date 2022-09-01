@@ -222,7 +222,7 @@ jobs:
 
           # clean so that @erlang_config regenerates with the correct erlang version
           # bazelisk clean --expunge
-          bazel build @erlang_config//external:otp
+          rm -dr bazel-rabbitmq-server/external/erlang_config
           bazel query '@erlang_config//external:otp' --output=build
 
       - name: Build
