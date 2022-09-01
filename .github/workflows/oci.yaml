@@ -220,10 +220,9 @@ jobs:
             build --//:elixir_home=${ELIXIR_HOME}
           EOF
 
-          cat bazel-rabbitmq-server/external/erlang_config/external/BUILD.bazel || echo "not found"
           # clean so that @erlang_config regenerates with the correct erlang version
-          bazelisk clean
-          cat bazel-rabbitmq-server/external/erlang_config/external/BUILD.bazel || echo "not found"
+          # bazelisk clean --expunge
+          bazel build @erlang_config//external:otp
           bazel query '@erlang_config//external:otp' --output=build
 
       - name: Build
