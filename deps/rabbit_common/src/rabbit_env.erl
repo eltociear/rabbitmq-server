@@ -1110,7 +1110,7 @@ get_default_plugins_path_from_node(Remote) ->
 rabbit_common_mod_location_to_plugins_dir(ModDir) ->
     case filename:basename(ModDir) of
         "ebin" ->
-            case filelib:is_dir(ModDir) of
+            case is_dir(ModDir) of
                 false ->
                     %% rabbit_common in the plugin's .ez archive.
                     filename:dirname(filename:dirname(filename:dirname(ModDir)));
@@ -1702,7 +1702,7 @@ get_temp_path_win32() ->
     F = fun(E) ->
                 case os:getenv(E) of
                     false -> false;
-                    Var -> {rabbit_file:is_dir(Var), Var}
+                    Var -> {is_dir(Var), Var}
                 end
         end,
     case lists:filtermap(F, EnvVars) of
