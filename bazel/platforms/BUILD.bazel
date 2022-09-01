@@ -24,39 +24,31 @@ constraint_value(
 platform(
     name = "erlang_23_internal",
     constraint_values = [
-        "@erlang_config//:erlang_internal",
-        "@erlang_config//:erlang_23",
         ":elixir_1_10",
     ],
-    parents = ["@rbe//config:platform"],
+    parents = ["@erlang_config//:erlang_23_internal"],
 )
 
 platform(
     name = "erlang_24_internal",
     constraint_values = [
-        "@erlang_config//:erlang_internal",
-        "@erlang_config//:erlang_24",
         ":elixir_1_12",
     ],
-    parents = ["@rbe//config:platform"],
+    parents = ["@erlang_config//:erlang_24_internal"],
 )
 
 platform(
     name = "erlang_25_internal",
     constraint_values = [
-        "@erlang_config//:erlang_internal",
-        "@erlang_config//:erlang_25",
         ":elixir_1_13",
     ],
-    parents = ["@rbe//config:platform"],
+    parents = ["@erlang_config//:erlang_25_internal"],
 )
 
 platform(
     name = "erlang_git_master_internal",
     constraint_values = [
-        "@erlang_config//:erlang_internal",
-        "@erlang_config//:erlang_git_master",
         ":elixir_1_13",
     ],
-    parents = ["@rbe//config:platform"],
+    parents = ["@erlang_config//:erlang_git_master_internal"],
 )
