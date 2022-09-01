@@ -22,6 +22,8 @@
          nodes/0,
          locally_known_nodes/0,
          get_store_id/0,
+         transfer_leadership/1,
+
 
          create/2,
          update/2,
@@ -316,6 +318,31 @@ get_store_id() ->
 
 dir() ->
     filename:join(rabbit_mnesia:dir(), atom_to_list(?STORE_ID)).
+
+-spec transfer_leadership([node()]) -> {ok, in_progress | undefined | node()} | {error, any()}.
+transfer_leadership([Destination | _] = _TransferCandidates) ->
+    case ra_leaderboard:lookup_leader(?STORE_ID) of
+        {Name, Node} = Id when Node == node() ->
+            case ra:transfer_leadership(Id, {Name, Destination}) of
+                ok ->
+                    case ra:members(Id) of
+                        {_, _, {_, NewNode}} ->
+                            {ok, NewNode};
+                        {timeout, _} ->
+                            {error, not_migrated}
+                    end;
+                already_leader ->
+                    {ok, Destination};
+                {error, _} = Error ->
+                    Error;
+                {timeout, _} ->
+                    {error, timeout}
+            end;
+        {_, Node} ->
+            {ok, Node};
+        undefined ->
+            {ok, undefined}
+    end.
 
 status() ->
     Nodes = rabbit_nodes:all_running(),
