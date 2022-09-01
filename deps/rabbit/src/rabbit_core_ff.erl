@@ -659,7 +659,7 @@ consume_mnesia_events(FeatureName, TablesAndOwners, Count, Handled) ->
 %% rabbit_exchange_type_topic
 handle_mnesia_write(Table, NewRecord, TablesAndOwners) ->
     {_, Mod} = lists:keyfind(Table, 1, TablesAndOwners),
-    Mod:mnesia_write_to_khepri(Table, NewRecord).
+    Mod:mnesia_write_to_khepri(Table, [NewRecord]).
 
 %% TODO handle mnesia_runtime_parameters, rabbit_amqqueue, rabbit_exchange, rabbit_binding,
 %% rabbit_exchange_type_topic
