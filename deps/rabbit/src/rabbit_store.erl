@@ -72,6 +72,7 @@
 init() ->
     rabbit_khepri:try_mnesia_or_khepri(
       fun() ->
+              recover_mnesia_tables(),
               rabbit_mnesia:init()
       end,
       fun() ->
@@ -2367,3 +2368,13 @@ khepri_delete(Path) ->
         {ok, _} -> ok;
         Error -> throw(Error)
     end.
+
+recover_mnesia_tables() ->
+    %% A failed migration can leave tables in read-only mode before enabling
+    %% the feature flag. See rabbit_core_ff:final_sync_from_mnesia_to_khepri/2
+    %% Unlock them here as mnesia is still fully functional.
+    Tables = rabbit_channel_tracking:get_all_tracked_channel_table_names_for_node(node())
+        ++ rabbit_connection_tracking:get_all_tracked_connection_table_names_for_node(node())
+        ++ [Table || {Table, _} <- rabbit_table:definitions()],
+    [mnesia:change_table_access_mode(Table, read_write) || Table <- Tables],
+    ok.
