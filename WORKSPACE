@@ -111,8 +111,8 @@ git_repository(
 
 git_repository(
     name = "rules_erlang",
+    commit = "640b18d7e183623b9a542390ceef3ac9e3face04",
     remote = "https://github.com/rabbitmq/rules_erlang.git",
-    commit = "6b566f11451c17adb67136e7184488a332a117d0",
 )
 
 load(
@@ -147,7 +147,6 @@ erlang_config(
             version = "master",
         ),
     ],
-    internal_erlang_parent_platform = "@rbe//config:platform",
 )
 
 rules_erlang_dependencies()

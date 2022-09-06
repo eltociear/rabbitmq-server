@@ -25,13 +25,7 @@ bazel_dep(
 
 bazel_dep(
     name = "rules_erlang",
-    version = "3.5.0",
-)
-
-git_override(
-    module_name = "rules_erlang",
-    remote = "https://github.com/rabbitmq/rules_erlang.git",
-    commit = "968c87ff248268bed4391edb6f6ac07a56547268",
+    version = "3.6.0",
 )
 
 # erlang_config = use_extension(
@@ -62,10 +56,6 @@ git_override(
 #     strip_prefix = "otp-master",
 #     url = "https://github.com/erlang/otp/archive/refs/heads/master.tar.gz",
 #     version = "master",
-# )
-
-# erlang_config.common(
-#     parent_platform = "@rbe//config:platform",
 # )
 
 # use_repo(

@@ -20,8 +20,11 @@ def elixir_toolchain_external():
 
     native.toolchain(
         name = "elixir_toolchain_external",
-        target_compatible_with = [
+        exec_compatible_with = [
             Label("@erlang_config//:erlang_external"),
+        ],
+        target_compatible_with = [
+            Label("//bazel/platforms:elixir_external"),
         ],
         toolchain = ":elixir_external",
         toolchain_type = Label("//bazel/elixir:toolchain_type"),
@@ -30,7 +33,6 @@ def elixir_toolchain_external():
 
 def elixir_toolchain_from_http_archive(
         name_suffix = "",
-        version = None,
         url = None,
         strip_prefix = None,
         sha256 = None,
@@ -49,7 +51,9 @@ def elixir_toolchain_from_http_archive(
 
     native.toolchain(
         name = "elixir_toolchain{}".format(name_suffix),
-        exec_compatible_with = elixir_constraints,
+        exec_compatible_with = [
+            Label("@erlang_config//:erlang_internal"),
+        ],
         target_compatible_with = elixir_constraints,
         toolchain = ":elixir{}".format(name_suffix),
         toolchain_type = Label("//bazel/elixir:toolchain_type"),
@@ -62,7 +66,6 @@ def elixir_toolchain_from_github_release(
         sha256 = None):
     [major, minor, patch] = version.split(".")
     elixir_constraints = [
-        Label("@erlang_config//:erlang_internal"),
         Label("//bazel/platforms:elixir_{}_{}".format(major, minor)),
     ]
     url = "https://github.com/elixir-lang/elixir/archive/refs/tags/v{}.tar.gz".format(version)
