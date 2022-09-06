@@ -543,27 +543,7 @@ recover_bindings(VHost, RecoverFun) ->
                       rabbit_misc:dirty_read_all(rabbit_semi_durable_route)]
       end,
       fun() ->
-              %% There are no more semi durable routes in Khepri, all durable must be
-              %% recovered
-              Root = khepri_routes_path_for_vhost(VHost),
-              Options = #{timeout => infinity},
-              {ok, Map} = rabbit_khepri:match_and_get_data(Root ++ [?STAR_STAR], Options),
-              maps:foreach(
-                fun(Path, _) ->
-                        Dst = destination_from_khepri_path(Path),
-                        Src = source_from_khepri_path(Path),
-                        RecoverFun(Path, Src, Dst, fun recover_semi_durable_route_txn/3, khepri)
-                end, Map),
-              {ok, Down} = rabbit_khepri:match_and_get_data(
-                             Root ++ [?STAR_STAR, #if_data_matches{pattern = #{status => down}}],
-                             Options),
-              rabbit_khepri:transaction(
-                fun() ->
-                        maps:foreach(
-                          fun(K, V) ->
-                                  {ok, _} = khepri_tx:put(K, V#{status => up})
-                          end, Down)
-                end, rw, Options)
+              ok
       end).
 
 %% Implicit bindings are implicit as of rabbitmq/rabbitmq-server#1721.
@@ -1946,12 +1926,6 @@ continue({[], Continuation}) -> continue(mnesia:select(Continuation)).
 binding_has_for_source_in_khepri(SrcName) ->
     maps:size(match_source_in_khepri_tx(SrcName)) > 0.
 
-destination_from_khepri_path([?MODULE, _Type, VHost, _Src, Kind, Dst | _]) ->
-    #resource{virtual_host = VHost, kind = Kind, name = Dst}.
-
-source_from_khepri_path([?MODULE, _Type, VHost, Src | _]) ->
-    #resource{virtual_host = VHost, kind = exchange, name = Src}.
-
 match_source_in_khepri_tx(#resource{virtual_host = VHost, name = Name}) ->
     Path = khepri_routes_path() ++ [VHost, Name, ?STAR_STAR],
     {ok, Map} = rabbit_khepri:tx_match_and_get_data(Path),
@@ -2094,26 +2068,8 @@ recover_semi_durable_route_txn(#route{binding = B} = Route, X, mnesia) ->
           (_Serial, true) -> rabbit_exchange:callback(X, add_binding, transaction, [X, B]);
           (Serial, false) -> rabbit_exchange:callback(X, add_binding, Serial, [X, B])
       end);
-recover_semi_durable_route_txn(Path, X, khepri) ->
-    MaybeSerial = rabbit_exchange:serialise_events(X),
-    execute_khepri_transaction(
-      fun () ->
-              case khepri_tx:get(Path) of
-                  {ok, #{Path := #{data := Set}}} ->
-                      {serial_in_khepri(MaybeSerial, X), Set};
-                  _ ->
-                      no_recover
-              end
-      end,
-      fun (no_recover, _) -> ok;
-          ({Serial, Set}, _) ->
-              sets:fold(
-                fun(B, _) ->
-                        rabbit_exchange:callback(X, add_binding, [transaction, Serial], [X, B])
-                end, none, Set),
-              ok
-      end,
-      #{timeout => infinity}).
+recover_semi_durable_route_txn(_Path, _X, khepri) ->
+    ok.
 
 list_queues_with_possible_retry_in_mnesia(Fun) ->
     %% amqqueue migration:
