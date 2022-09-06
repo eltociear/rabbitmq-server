@@ -181,9 +181,8 @@ create_exchange(#exchange{name = XName} = X, PrePostCommitFun) ->
                 PrePostCommitFun)
       end,
       fun() ->
-              execute_khepri_transaction(
-                fun() -> create_exchange_in_khepri(khepri_exchange_path(XName), X) end,
-                PrePostCommitFun)
+              PrePostCommitFun(create_exchange_in_khepri(khepri_exchange_path(XName), X),
+                               all)
       end).
 
 list_exchanges() ->
@@ -837,16 +836,12 @@ store_queue_without_recover(DurableQ, Q) ->
       end,
       fun() ->
               Path = khepri_queue_path(QueueName),
-              rabbit_khepri:transaction(
-                fun() ->
-                        case khepri_tx:get(Path) of
-                            {ok, #{Path := #{data := ExistingQ}}} ->
-                                {existing, ExistingQ};
-                            _ ->
-                                store_in_khepri(Path, Q),
-                                {created, Q}
-                        end
-                end)
+              case rabbit_khepri:create(Path, Q) of
+                  {ok, #{Path := #{data := ExistingQ}}} ->
+                      {existing, ExistingQ};
+                  _ ->
+                      {created, Q}
+              end
       end).
 
 store_queue_dirty(Q) ->
@@ -1347,10 +1342,10 @@ create_exchange_in_mnesia(Name, X) ->
     end.
 
 create_exchange_in_khepri(Path, X) ->
-    case lookup_tx_in_khepri(Path) of
-        [] ->
-            {new, store_exchange_in_khepri(X)};
-        [ExistingX] ->
+    case rabbit_khepri:create(Path, X) of
+        {ok, _} ->
+            {new, X};
+        {error, {mismatching_node, #{node_props := #{data := ExistingX}}}} ->
             {existing, ExistingX}
     end.
 
@@ -1682,7 +1677,7 @@ sync_index_route(_, _, _) ->
 
 remove_transient_routes(Routes) ->
     lists:map(fun(#route{binding = #binding{source = Src} = Binding} = Route) ->
-                      {ok, X} = rabbit_exchange:lookup(Src),
+                      {ok, X} = lookup_exchange(Src),
                       ok = sync_transient_route(Route, should_index_table(X), fun delete/3),
                       Binding
               end, Routes).
@@ -1715,7 +1710,7 @@ remove_routes(Routes, ShouldIndexTable) ->
             ok;
         undefined ->
             [begin
-                 case rabbit_exchange:lookup(Src) of
+                 case lookup_exchange(Src) of
                      {ok, X} ->
                          ok = sync_index_route(R, should_index_table(X), fun delete/3);
                      _ ->
@@ -1784,7 +1779,7 @@ populate_index_route_table() ->
               mnesia:lock({table, rabbit_index_route}, write),
               Routes = rabbit_misc:dirty_read_all(rabbit_route),
               lists:foreach(fun(#route{binding = #binding{source = Exchange}} = Route) ->
-                                    case rabbit_exchange:lookup(Exchange) of
+                                    case lookup_exchange(Exchange) of
                                         {ok, X} ->
                                             case should_index_table(X) of
                                                 true ->
@@ -2211,10 +2206,14 @@ internal_delete_queue_in_mnesia(QueueName, OnlyDurable, Reason) ->
 
 internal_delete_queue_in_khepri(QueueName, OnlyDurable, _Reason) ->
     Path = khepri_queue_path(QueueName),
-    {ok, _} = khepri_tx:delete(Path),
-    %% we want to execute some things, as decided by rabbit_exchange,
-    %% after the transaction.
-    remove_bindings_for_destination_in_khepri(QueueName, OnlyDurable).
+    case khepri_tx:delete(Path) of
+        {ok, #{Path := _}} ->
+            %% we want to execute some things, as decided by rabbit_exchange,
+            %% after the transaction.
+            remove_bindings_for_destination_in_khepri(QueueName, OnlyDurable);
+        {ok, _} ->
+            ok
+    end.
 
 delete_queue_in_mnesia(QueueName, Reason) ->
     rabbit_misc:execute_mnesia_transaction(
@@ -2232,12 +2231,7 @@ delete_queue_in_mnesia(QueueName, Reason) ->
 delete_queue_in_khepri(Name, Reason) ->
     rabbit_khepri:transaction(
       fun () ->
-              case lookup_tx_in_khepri(khepri_queue_path(Name)) of
-                  [] ->
-                      ok;
-                  _ ->
-                      internal_delete_queue_in_khepri(Name, false, Reason)
-              end
+              internal_delete_queue_in_khepri(Name, false, Reason)
       end, rw).
 
 delete_transient_queue_in_mnesia(QName) ->
