@@ -98,7 +98,7 @@ recover(VHost) ->
     AllQs = Recovered ++ Failed,
     QNames = [amqqueue:get_name(Q) || Q <- AllQs],
     {Time, ok} = timer:tc(fun() ->
-                                  rabbit_binding:recover(VHost, rabbit_exchange:recover(VHost), QNames)
+                                  rabbit_binding:recover(rabbit_exchange:recover(VHost), QNames)
                           end),
     rabbit_log:debug("rabbit_binding:recover/2 for vhost ~s completed in ~fs", [VHost, Time/1000000]),
 

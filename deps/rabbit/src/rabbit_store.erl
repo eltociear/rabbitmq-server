@@ -23,7 +23,7 @@
 -export([exists_binding/1, add_binding/2, delete_binding/2, list_bindings/1,
          list_bindings_for_source/1, list_bindings_for_destination/1,
          list_bindings_for_source_and_destination/2, list_explicit_bindings/0,
-         recover_bindings/0, recover_bindings/2, delete_binding/1,
+         recover_bindings/0, recover_bindings/1, delete_binding/1,
          index_route_table_definition/0, populate_index_route_table/0]).
 
 %% TODO used by rabbit_policy, to become internal
@@ -140,9 +140,6 @@ khepri_route_path(#binding{source = #resource{virtual_host = VHost, name = SrcNa
 
 khepri_routes_path() ->
     [?MODULE, routes].
-
-khepri_routes_path_for_vhost(VHost) ->
-    [?MODULE, routes, VHost].
 
 %% Routing optimisation, probably the most relevant on the hot code path.
 %% It only needs to store a list of destinations to be used by rabbit_router.
@@ -534,7 +531,7 @@ recover_bindings() ->
       %% Nothing to do in khepri, single table storage
       fun() -> ok end).
 
-recover_bindings(VHost, RecoverFun) ->
+recover_bindings(RecoverFun) ->
     rabbit_khepri:try_mnesia_or_khepri(
       fun() ->
               [RecoverFun(Route, Src, Dst, fun recover_semi_durable_route_txn/3, mnesia) ||
